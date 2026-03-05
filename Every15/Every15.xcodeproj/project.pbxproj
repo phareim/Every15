@@ -30,10 +30,12 @@
 		99B17F1A0928223CE921AC8E /* NotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5F842B357F25F7EADF1B3257 /* NotificationService.swift */; };
 		A7B8ADFC93E2FC639E94F28B /* UserSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2E0F7CB2E96E5DD030AB19F8 /* UserSettings.swift */; };
 		AAC8F25B180AC7183B32EBB0 /* UserSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2E0F7CB2E96E5DD030AB19F8 /* UserSettings.swift */; };
+		AD5E981AF90D1B403792890D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 2670CAB9B61AE14E190FCCCC /* Assets.xcassets */; };
 		BB2FFE128AAE885B8D37AF4B /* APIService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A348EDE9AB42BAB47B91A4B /* APIService.swift */; };
 		C5C47F80057A4D7C2A51373E /* SummaryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00658F07AC107837146178F5 /* SummaryView.swift */; };
 		DEC78912998556C6ECC455F1 /* TimelineView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC73F906F822FEEDA147C4D1 /* TimelineView.swift */; };
 		DFD2A42363D0DD088EF6D0BA /* StoreService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5BCAD0562B5E87194408B63E /* StoreService.swift */; };
+		E4C97CDAA82B2920B4BC1186 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 2670CAB9B61AE14E190FCCCC /* Assets.xcassets */; };
 		F1539390D2FCC530548D679D /* Every15App.swift in Sources */ = {isa = PBXBuildFile; fileRef = 02B54FFD3AF977681A30C64F /* Every15App.swift */; };
 		F61A565C2D1602DBC4E8103F /* SummaryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00658F07AC107837146178F5 /* SummaryView.swift */; };
 		FA0D02AD9F5FD524348FA9C3 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2C9A0A12CB296BF374EBF550 /* SettingsView.swift */; };
@@ -47,6 +49,7 @@
 		036B7789CFB3FEB5EBE9BB15 /* AuthService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthService.swift; sourceTree = "<group>"; };
 		143D3A7742AA8DEE10E29482 /* Every15.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Every15.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		1A348EDE9AB42BAB47B91A4B /* APIService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIService.swift; sourceTree = "<group>"; };
+		2670CAB9B61AE14E190FCCCC /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		2C9A0A12CB296BF374EBF550 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		2E0F7CB2E96E5DD030AB19F8 /* UserSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserSettings.swift; sourceTree = "<group>"; };
 		339D06CDD877E54A6D1A6FEB /* SyncService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncService.swift; sourceTree = "<group>"; };
@@ -98,6 +101,7 @@
 		AAB5EE6BDD999C018883C1CB /* Shared */ = {
 			isa = PBXGroup;
 			children = (
+				2670CAB9B61AE14E190FCCCC /* Assets.xcassets */,
 				02B54FFD3AF977681A30C64F /* Every15App.swift */,
 				1871EE113C27C88018E2A26E /* Models */,
 				408BEC1D5FF029641DE4B4A6 /* Services */,
@@ -135,6 +139,7 @@
 			buildConfigurationList = 9F7F84847A70DCB94943E650 /* Build configuration list for PBXNativeTarget "Every15_macOS" */;
 			buildPhases = (
 				3894A77120BBB3AC590CBC86 /* Sources */,
+				D9CCDE25994220957E9D3EDA /* Resources */,
 			);
 			buildRules = (
 			);
@@ -152,6 +157,7 @@
 			buildConfigurationList = F494E9F9C9EED4BB97844099 /* Build configuration list for PBXNativeTarget "Every15_iOS" */;
 			buildPhases = (
 				FFD17287B55B2E86177834BA /* Sources */,
+				C2930534BA6CC2E8F8C28953 /* Resources */,
 			);
 			buildRules = (
 			);
@@ -202,6 +208,25 @@
 			);
 		};
 /* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		C2930534BA6CC2E8F8C28953 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				E4C97CDAA82B2920B4BC1186 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D9CCDE25994220957E9D3EDA /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AD5E981AF90D1B403792890D /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		3894A77120BBB3AC590CBC86 /* Sources */ = {

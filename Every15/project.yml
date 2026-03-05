@@ -27,6 +27,8 @@ targets:
         CURRENT_PROJECT_VERSION: 1
         GENERATE_INFOPLIST_FILE: true
         INFOPLIST_KEY_CFBundleDisplayName: Every15
+      macOS:
+        INFOPLIST_KEY_LSUIElement: false
     entitlements:
       path: Every15.entitlements
       properties:
