@@ -35,8 +35,9 @@ app.post("/auth/apple", async (c) => {
       },
     });
   } catch (err) {
-    console.error("Auth error:", err);
-    return c.json({ error: "Authentication failed" }, 401);
+    const message = err instanceof Error ? err.message : String(err);
+    console.error("Auth error:", message);
+    return c.json({ error: "Authentication failed", detail: message }, 401);
   }
 });
 

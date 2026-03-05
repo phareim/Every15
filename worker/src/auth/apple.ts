@@ -26,8 +26,13 @@ export async function verifyAppleIdentityToken(
 
   const { payload } = await jose.jwtVerify(identityToken, jwks, {
     issuer: "https://appleid.apple.com",
-    audience: "no.phareim.every15",
   });
+
+  // Verify audience matches our bundle ID
+  const aud = Array.isArray(payload.aud) ? payload.aud : [payload.aud];
+  if (!aud.includes("no.phareim.every15")) {
+    throw new Error(`unexpected audience: ${aud.join(", ")}`);
+  }
 
   return {
     appleUserId: payload.sub!,

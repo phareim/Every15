@@ -32,7 +32,9 @@ final class APIService {
         }
 
         guard (200...299).contains(httpResponse.statusCode) else {
-            throw APIError.httpError(httpResponse.statusCode)
+            let body = String(data: data, encoding: .utf8) ?? ""
+            print("HTTP \(httpResponse.statusCode): \(body)")
+            throw APIError.httpError(httpResponse.statusCode, body)
         }
 
         return data
@@ -90,13 +92,13 @@ final class APIService {
 enum APIError: Error, LocalizedError {
     case invalidURL
     case invalidResponse
-    case httpError(Int)
+    case httpError(Int, String)
 
     var errorDescription: String? {
         switch self {
         case .invalidURL: return "Invalid URL"
         case .invalidResponse: return "Invalid response"
-        case .httpError(let code): return "HTTP error \(code)"
+        case .httpError(let code, let body): return "HTTP \(code): \(body)"
         }
     }
 }

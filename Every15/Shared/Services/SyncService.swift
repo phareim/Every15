@@ -34,10 +34,9 @@ final class SyncService: ObservableObject {
 
     // MARK: - Add Entry
 
-    func addEntry(text: String) {
-        let now = Date()
-        let today = Self.dateString(for: now)
-        let timeStr = Self.timeString(for: now)
+    func addEntry(text: String, at date: Date = Date()) {
+        let today = Self.dateString(for: date)
+        let timeStr = Self.timeString(for: date)
 
         let entry = Entry(time: timeStr, text: text)
 

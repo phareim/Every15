@@ -8,6 +8,7 @@ final class AuthService: ObservableObject {
 
     @Published var isAuthenticated = false
     @Published var currentUser: AuthUser?
+    @Published var authError: String?
 
     private let tokenKey = "com.every15.auth.token"
 
@@ -45,8 +46,12 @@ final class AuthService: ObservableObject {
                 token = response.token
                 currentUser = response.user
                 isAuthenticated = true
+            } catch let apiError as APIError {
+                print("Auth API error: \(apiError.errorDescription ?? "unknown")")
+                self.authError = apiError.errorDescription
             } catch {
                 print("Auth error: \(error)")
+                self.authError = error.localizedDescription
             }
 
         case .failure(let error):
