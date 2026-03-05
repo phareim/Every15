@@ -1,0 +1,19 @@
+{
+  "name": "every15-worker",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "db:migrate": "wrangler d1 execute every15-db --file=schema.sql"
+  },
+  "dependencies": {
+    "hono": "^4.7.0",
+    "jose": "^6.0.0"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250224.0",
+    "typescript": "^5.7.0",
+    "wrangler": "^4.0.0"
+  }
+}

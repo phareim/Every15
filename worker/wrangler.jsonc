@@ -1,0 +1,28 @@
+{
+  "name": "every15-worker",
+  "main": "src/index.ts",
+  "compatibility_date": "2025-03-01",
+  "compatibility_flags": ["nodejs_compat"],
+
+  // D1 Database
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "every15-db",
+      "database_id": "731526f0-3021-461a-94a7-34a9b58737ba"
+    }
+  ],
+
+  // R2 Bucket
+  "r2_buckets": [
+    {
+      "binding": "BUCKET",
+      "bucket_name": "every15-data"
+    }
+  ],
+
+  // Workers AI
+  "ai": {
+    "binding": "AI"
+  }
+}
