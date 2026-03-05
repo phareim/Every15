@@ -67,24 +67,41 @@ final class SyncService: ObservableObject {
         if date == Self.dateString(for: Date()) {
             todayEntries = dayData.entries
         }
-        Task { await syncDay(date) }
+        Task { await syncDayReplace(date) }
     }
 
-    /// The previous quarter's entry (relative to the current quarter), if one exists.
-    var previousQuarterEntry: Entry? {
-        let now = Self.floorToQuarter(Date())
-        let prev = now.addingTimeInterval(-15 * 60)
+    private func syncDayReplace(_ date: String) async {
+        guard AuthService.shared.isAuthenticated else { return }
+        guard let dayData = localEntries[date] else { return }
+
+        do {
+            let replaced = try await APIService.shared.putEntries(date: date, dayEntries: dayData, replace: true)
+            var local = localEntries
+            local[date] = replaced
+            localEntries = local
+            if date == Self.dateString(for: Date()) {
+                todayEntries = replaced.entries
+            }
+        } catch {
+            print("Sync replace error: \(error)")
+        }
+    }
+
+    /// The entry for the quarter before `referenceTime`, if one exists.
+    func previousQuarterEntry(relativeTo referenceTime: Date) -> Entry? {
+        let snapped = Self.floorToQuarter(referenceTime)
+        let prev = snapped.addingTimeInterval(-15 * 60)
         let prevTime = Self.timeString(for: prev)
         return todayEntries.first(where: { $0.time == prevTime })
     }
 
-    /// Extend the previous quarter into the current one by copying its text as an extension entry.
-    func extendPreviousQuarter() {
-        guard let prev = previousQuarterEntry else { return }
+    /// Extend the previous quarter into the given time slot by copying its text as an extension entry.
+    func extendPreviousQuarter(at referenceTime: Date) {
+        guard let prev = previousQuarterEntry(relativeTo: referenceTime) else { return }
 
-        let now = Self.floorToQuarter(Date())
-        let today = Self.dateString(for: now)
-        let timeStr = Self.timeString(for: now)
+        let snapped = Self.floorToQuarter(referenceTime)
+        let today = Self.dateString(for: snapped)
+        let timeStr = Self.timeString(for: snapped)
 
         var local = localEntries
         var dayData = local[today] ?? DayEntries(date: today, entries: [])

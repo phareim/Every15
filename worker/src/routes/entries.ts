@@ -47,28 +47,33 @@ entries.put("/:date", async (c) => {
 
   const body = await c.req.json<DayEntries>();
   const key = `${userId}/entries/${date}.json`;
+  const replace = c.req.query("replace") === "true";
 
-  // Merge with existing if present
-  const existing = await c.env.BUCKET.get(key);
   let merged: DayEntries;
 
-  if (existing) {
-    const existingData = (await existing.json()) as DayEntries;
-    // Merge by entry ID — incoming entries overwrite existing ones with same ID
-    const entryMap = new Map(
-      existingData.entries.map((e) => [e.id, e]),
-    );
-    for (const entry of body.entries) {
-      entryMap.set(entry.id, entry);
-    }
-    merged = {
-      date,
-      entries: Array.from(entryMap.values()).sort((a, b) =>
-        a.time.localeCompare(b.time),
-      ),
-    };
+  if (replace) {
+    // Full replace — used when entries are deleted client-side
+    merged = { date, entries: body.entries.sort((a, b) => a.time.localeCompare(b.time)) };
   } else {
-    merged = { date, entries: body.entries };
+    // Merge with existing if present
+    const existing = await c.env.BUCKET.get(key);
+    if (existing) {
+      const existingData = (await existing.json()) as DayEntries;
+      const entryMap = new Map(
+        existingData.entries.map((e) => [e.id, e]),
+      );
+      for (const entry of body.entries) {
+        entryMap.set(entry.id, entry);
+      }
+      merged = {
+        date,
+        entries: Array.from(entryMap.values()).sort((a, b) =>
+          a.time.localeCompare(b.time),
+        ),
+      };
+    } else {
+      merged = { date, entries: body.entries };
+    }
   }
 
   await c.env.BUCKET.put(key, JSON.stringify(merged));

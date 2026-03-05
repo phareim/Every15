@@ -55,9 +55,10 @@ final class APIService {
         return try JSONDecoder().decode([DayEntries].self, from: data)
     }
 
-    func putEntries(date: String, dayEntries: DayEntries) async throws -> DayEntries {
+    func putEntries(date: String, dayEntries: DayEntries, replace: Bool = false) async throws -> DayEntries {
         let body = try JSONEncoder().encode(dayEntries)
-        let data = try await request("/entries/\(date)", method: "PUT", body: body)
+        let suffix = replace ? "?replace=true" : ""
+        let data = try await request("/entries/\(date)\(suffix)", method: "PUT", body: body)
         return try JSONDecoder().decode(DayEntries.self, from: data)
     }
 

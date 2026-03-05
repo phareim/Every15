@@ -23,7 +23,7 @@ struct EntryView: View {
     }
 
     private var canExtend: Bool {
-        !isEditing && syncService.previousQuarterEntry != nil
+        !isEditing && syncService.previousQuarterEntry(relativeTo: entryTime) != nil
     }
 
     var body: some View {
@@ -34,9 +34,36 @@ struct EntryView: View {
                 .font(.largeTitle)
                 .fontWeight(.bold)
 
-            Text(isEditing ? "Editing \(displayTime)" : isBackfilling ? "Backfilling \(displayTime)" : displayTime)
-                .font(.title3)
-                .foregroundStyle(isEditing ? .blue : isBackfilling ? .orange : .secondary)
+            HStack(spacing: 16) {
+                Button {
+                    entryTime = entryTime.addingTimeInterval(-15 * 60)
+                } label: {
+                    Image(systemName: "chevron.left")
+                        .font(.title3)
+                        .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
+
+                Text(isEditing ? "Editing \(displayTime)" : isBackfilling ? "Backfilling \(displayTime)" : displayTime)
+                    .font(.title3)
+                    .foregroundStyle(isEditing ? .blue : isBackfilling ? .orange : .secondary)
+
+                Button {
+                    let next = entryTime.addingTimeInterval(15 * 60)
+                    if SyncService.floorToQuarter(next) > SyncService.floorToQuarter(Date()) {
+                        resetToNow()
+                    } else {
+                        entryTime = next
+                    }
+                } label: {
+                    Image(systemName: "chevron.right")
+                        .font(.title3)
+                        .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
+                .opacity(isNow && !isBackfilling && !isEditing ? 0 : 1)
+                .disabled(isNow && !isBackfilling && !isEditing)
+            }
 
             TextEditor(text: $text)
                 .font(.title3)
@@ -82,15 +109,18 @@ struct EntryView: View {
                     return .ignored
                 }
                 .onKeyPress(.leftArrow, phases: .down) { press in
-                    guard press.modifiers.contains(.option) else { return .ignored }
+                    guard press.modifiers.contains(.option) && press.modifiers.contains(.command) else { return .ignored }
                     entryTime = entryTime.addingTimeInterval(-15 * 60)
                     return .handled
                 }
                 .onKeyPress(.rightArrow, phases: .down) { press in
-                    guard press.modifiers.contains(.option) else { return .ignored }
+                    guard press.modifiers.contains(.option) && press.modifiers.contains(.command) else { return .ignored }
                     let next = entryTime.addingTimeInterval(15 * 60)
-                    let now = Date()
-                    entryTime = SyncService.floorToQuarter(next) <= SyncService.floorToQuarter(now) ? next : now
+                    if SyncService.floorToQuarter(next) > SyncService.floorToQuarter(Date()) {
+                        resetToNow()
+                    } else {
+                        entryTime = next
+                    }
                     return .handled
                 }
 
@@ -164,16 +194,10 @@ struct EntryView: View {
                                 .font(.subheadline)
                                 .foregroundStyle(.secondary)
                                 .frame(width: 50, alignment: .leading)
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(entry.text)
-                                    .font(.body)
-                                    .lineLimit(1)
-                                if entry.extended {
-                                    Text("↳ extended")
-                                        .font(.caption2)
-                                        .foregroundStyle(.tertiary)
-                                }
-                            }
+                            Text(entry.text)
+                                .font(.body)
+                                .foregroundStyle(entry.extended ? .tertiary : .primary)
+                                .lineLimit(1)
                             Spacer()
                             Button {
                                 startEditing(entry)
@@ -216,7 +240,21 @@ struct EntryView: View {
         isBackfilling = false
     }
 
+    @State private var skipNextLoad = false
+
+    private func resetToNow() {
+        skipNextLoad = true
+        editingEntryId = nil
+        text = ""
+        isBackfilling = false
+        entryTime = Date()
+    }
+
     private func loadEntryForTime(_ time: Date) {
+        if skipNextLoad {
+            skipNextLoad = false
+            return
+        }
         let snapped = SyncService.floorToQuarter(time)
         let timeStr = SyncService.timeString(for: snapped)
         isBackfilling = snapped < SyncService.floorToQuarter(Date())
@@ -259,6 +297,13 @@ struct EntryView: View {
     }
 
     private func extend() {
-        syncService.extendPreviousQuarter()
+        syncService.extendPreviousQuarter(at: entryTime)
+        if isBackfilling {
+            entryTime = syncService.nextEmptyQuarter(after: entryTime)
+            if SyncService.floorToQuarter(entryTime) >= SyncService.floorToQuarter(Date()) {
+                entryTime = Date()
+                isBackfilling = false
+            }
+        }
     }
 }

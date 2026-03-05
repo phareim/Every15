@@ -25,7 +25,7 @@ struct TimelineView: View {
             } else {
                 List {
                     ForEach(entries) { entry in
-                        HStack(alignment: .top) {
+                        HStack(alignment: .center) {
                             Text(entry.time)
                                 .font(.callout)
                                 .foregroundStyle(.secondary)
@@ -33,11 +33,7 @@ struct TimelineView: View {
                             VStack(alignment: .leading) {
                                 Text(entry.text)
                                     .font(.body)
-                                if entry.extended {
-                                    Text("↳ extended")
-                                        .font(.caption2)
-                                        .foregroundStyle(.tertiary)
-                                }
+                                    .foregroundStyle(entry.extended ? .tertiary : .primary)
                                 if !entry.tags.isEmpty {
                                     Text(entry.tags.joined(separator: ", "))
                                         .font(.caption)
