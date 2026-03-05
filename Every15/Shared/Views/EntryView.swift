@@ -6,7 +6,10 @@ struct EntryView: View {
     @State private var entryTime = Date()
     @State private var isBackfilling = false
     @State private var showTimePicker = false
+    @State private var editingEntryId: String?
     @FocusState private var isFocused: Bool
+
+    private var isEditing: Bool { editingEntryId != nil }
 
     private var displayTime: String {
         let snapped = SyncService.floorToQuarter(entryTime)
@@ -20,7 +23,7 @@ struct EntryView: View {
     }
 
     private var canExtend: Bool {
-        syncService.previousQuarterEntry != nil
+        !isEditing && syncService.previousQuarterEntry != nil
     }
 
     var body: some View {
@@ -31,9 +34,9 @@ struct EntryView: View {
                 .font(.largeTitle)
                 .fontWeight(.bold)
 
-            Text(isBackfilling ? "Backfilling \(displayTime)" : displayTime)
+            Text(isEditing ? "Editing \(displayTime)" : isBackfilling ? "Backfilling \(displayTime)" : displayTime)
                 .font(.title3)
-                .foregroundStyle(isBackfilling ? .orange : .secondary)
+                .foregroundStyle(isEditing ? .blue : isBackfilling ? .orange : .secondary)
 
             TextEditor(text: $text)
                 .font(.title3)
@@ -43,6 +46,10 @@ struct EntryView: View {
                     RoundedRectangle(cornerRadius: 10)
                         .fill(.background)
                         .shadow(color: .primary.opacity(0.1), radius: 4, y: 2)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 10)
+                                .stroke(isEditing ? .blue.opacity(0.5) : .clear, lineWidth: 2)
+                        )
                 )
                 .overlay(alignment: .topLeading) {
                     if text.isEmpty {
@@ -67,34 +74,36 @@ struct EntryView: View {
                     }
                     return .ignored
                 }
+                .onKeyPress(.escape, phases: .down) { _ in
+                    if isEditing {
+                        cancelEdit()
+                        return .handled
+                    }
+                    return .ignored
+                }
                 .onKeyPress(.leftArrow, phases: .down) { press in
                     guard press.modifiers.contains(.option) else { return .ignored }
                     entryTime = entryTime.addingTimeInterval(-15 * 60)
-                    isBackfilling = SyncService.floorToQuarter(entryTime) < SyncService.floorToQuarter(Date())
                     return .handled
                 }
                 .onKeyPress(.rightArrow, phases: .down) { press in
                     guard press.modifiers.contains(.option) else { return .ignored }
                     let next = entryTime.addingTimeInterval(15 * 60)
                     let now = Date()
-                    if SyncService.floorToQuarter(next) <= SyncService.floorToQuarter(now) {
-                        entryTime = next
-                    } else {
-                        entryTime = now
-                    }
-                    isBackfilling = SyncService.floorToQuarter(entryTime) < SyncService.floorToQuarter(now)
+                    entryTime = SyncService.floorToQuarter(next) <= SyncService.floorToQuarter(now) ? next : now
                     return .handled
                 }
 
             HStack(spacing: 12) {
                 Button(action: submit) {
-                    Text("Log it")
+                    Text(isEditing ? "Update" : "Log it")
                         .font(.title3)
                         .fontWeight(.medium)
                         .frame(maxWidth: .infinity)
                         .frame(height: 44)
                 }
                 .buttonStyle(.borderedProminent)
+                .tint(isEditing ? .blue : .accentColor)
                 .keyboardShortcut(.return, modifiers: .command)
                 .disabled(text.trimmingCharacters(in: .whitespaces).isEmpty)
 
@@ -112,7 +121,7 @@ struct EntryView: View {
                 Button {
                     showTimePicker.toggle()
                 } label: {
-                    Text(isNow && !isBackfilling ? "Now" : displayTime)
+                    Text(isNow && !isBackfilling && !isEditing ? "Now" : displayTime)
                         .font(.title3)
                         .fontWeight(.medium)
                         .frame(height: 44)
@@ -134,7 +143,7 @@ struct EntryView: View {
                     .padding()
                 }
                 .onChange(of: entryTime) { _, newValue in
-                    isBackfilling = SyncService.floorToQuarter(newValue) < SyncService.floorToQuarter(Date())
+                    loadEntryForTime(newValue)
                 }
             }
             .padding(.horizontal)
@@ -165,7 +174,19 @@ struct EntryView: View {
                                         .foregroundStyle(.tertiary)
                                 }
                             }
+                            Spacer()
+                            Button {
+                                startEditing(entry)
+                            } label: {
+                                Image(systemName: "pencil")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                            .buttonStyle(.plain)
                         }
+                        .padding(.vertical, 2)
+                        .background(editingEntryId == entry.id ? Color.blue.opacity(0.08) : Color.clear)
+                        .cornerRadius(4)
                     }
                 }
                 .padding(.horizontal)
@@ -175,20 +196,63 @@ struct EntryView: View {
         .onAppear { isFocused = true }
     }
 
+    private func startEditing(_ entry: Entry) {
+        editingEntryId = entry.id
+        text = entry.text
+        let today = Calendar.current.startOfDay(for: Date())
+        let parts = entry.time.split(separator: ":").compactMap { Int($0) }
+        if parts.count == 2 {
+            let newTime = Calendar.current.date(bySettingHour: parts[0], minute: parts[1], second: 0, of: today) ?? Date()
+            entryTime = newTime
+            isBackfilling = SyncService.floorToQuarter(newTime) < SyncService.floorToQuarter(Date())
+        }
+        isFocused = true
+    }
+
+    private func cancelEdit() {
+        editingEntryId = nil
+        text = ""
+        entryTime = Date()
+        isBackfilling = false
+    }
+
+    private func loadEntryForTime(_ time: Date) {
+        let snapped = SyncService.floorToQuarter(time)
+        let timeStr = SyncService.timeString(for: snapped)
+        isBackfilling = snapped < SyncService.floorToQuarter(Date())
+
+        if let entry = syncService.todayEntries.first(where: { $0.time == timeStr }) {
+            editingEntryId = entry.id
+            text = entry.text
+        } else {
+            editingEntryId = nil
+            text = ""
+        }
+    }
+
     private func submit() {
         let trimmed = text.trimmingCharacters(in: .whitespaces)
         guard !trimmed.isEmpty else { return }
-        syncService.addEntry(text: trimmed, at: entryTime)
-        text = ""
 
-        if isBackfilling {
-            entryTime = syncService.nextEmptyQuarter(after: entryTime)
-            if SyncService.floorToQuarter(entryTime) >= SyncService.floorToQuarter(Date()) {
-                entryTime = Date()
-                isBackfilling = false
-            }
-        } else {
+        if let editId = editingEntryId {
+            syncService.updateEntry(id: editId, newText: trimmed)
+            editingEntryId = nil
+            text = ""
             entryTime = Date()
+            isBackfilling = false
+        } else {
+            syncService.addEntry(text: trimmed, at: entryTime)
+            text = ""
+
+            if isBackfilling {
+                entryTime = syncService.nextEmptyQuarter(after: entryTime)
+                if SyncService.floorToQuarter(entryTime) >= SyncService.floorToQuarter(Date()) {
+                    entryTime = Date()
+                    isBackfilling = false
+                }
+            } else {
+                entryTime = Date()
+            }
         }
 
         isFocused = true

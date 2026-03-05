@@ -57,6 +57,19 @@ final class SyncService: ObservableObject {
         Task { await syncDay(today) }
     }
 
+    /// Delete an entry by ID on a given date.
+    func deleteEntry(id: String, on date: String) {
+        var local = localEntries
+        guard var dayData = local[date] else { return }
+        dayData.entries.removeAll { $0.id == id }
+        local[date] = dayData
+        localEntries = local
+        if date == Self.dateString(for: Date()) {
+            todayEntries = dayData.entries
+        }
+        Task { await syncDay(date) }
+    }
+
     /// The previous quarter's entry (relative to the current quarter), if one exists.
     var previousQuarterEntry: Entry? {
         let now = Self.floorToQuarter(Date())
@@ -81,6 +94,29 @@ final class SyncService: ObservableObject {
         } else {
             dayData.entries.append(Entry(time: timeStr, text: prev.text, extended: true))
             dayData.entries.sort { $0.time < $1.time }
+        }
+
+        local[today] = dayData
+        localEntries = local
+        todayEntries = dayData.entries
+
+        Task { await syncDay(today) }
+    }
+
+    /// Update an existing entry's text (and snap its time to the nearest quarter).
+    func updateEntry(id: String, newText: String) {
+        let today = Self.dateString(for: Date())
+        var local = localEntries
+        guard var dayData = local[today] else { return }
+
+        guard let idx = dayData.entries.firstIndex(where: { $0.id == id }) else { return }
+
+        // Snap the time if it's misaligned
+        dayData.entries[idx].text = newText
+        let parts = dayData.entries[idx].time.split(separator: ":").compactMap { Int($0) }
+        if parts.count == 2 {
+            let minute = parts[1] - (parts[1] % 15)
+            dayData.entries[idx].time = String(format: "%02d:%02d", parts[0], minute)
         }
 
         local[today] = dayData

@@ -23,21 +23,35 @@ struct TimelineView: View {
                     description: Text("No entries logged for this day")
                 )
             } else {
-                List(entries) { entry in
-                    HStack(alignment: .top) {
-                        Text(entry.time)
-                            .font(.callout)
-                            .foregroundStyle(.secondary)
-                            .frame(width: 55, alignment: .leading)
-                        VStack(alignment: .leading) {
-                            Text(entry.text)
-                                .font(.body)
-                            if !entry.tags.isEmpty {
-                                Text(entry.tags.joined(separator: ", "))
-                                    .font(.caption)
-                                    .foregroundStyle(.tertiary)
+                List {
+                    ForEach(entries) { entry in
+                        HStack(alignment: .top) {
+                            Text(entry.time)
+                                .font(.callout)
+                                .foregroundStyle(.secondary)
+                                .frame(width: 55, alignment: .leading)
+                            VStack(alignment: .leading) {
+                                Text(entry.text)
+                                    .font(.body)
+                                if entry.extended {
+                                    Text("↳ extended")
+                                        .font(.caption2)
+                                        .foregroundStyle(.tertiary)
+                                }
+                                if !entry.tags.isEmpty {
+                                    Text(entry.tags.joined(separator: ", "))
+                                        .font(.caption)
+                                        .foregroundStyle(.tertiary)
+                                }
                             }
                         }
+                    }
+                    .onDelete { offsets in
+                        let dateStr = SyncService.dateString(for: selectedDate)
+                        for index in offsets {
+                            syncService.deleteEntry(id: entries[index].id, on: dateStr)
+                        }
+                        entries.remove(atOffsets: offsets)
                     }
                 }
                 .listStyle(.plain)
