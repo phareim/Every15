@@ -8,7 +8,7 @@
     "db:migrate": "wrangler d1 execute every15-db --file=schema.sql"
   },
   "dependencies": {
-    "hono": "^4.7.0",
+    "hono": "^4.12.14",
     "jose": "^6.0.0"
   },
   "devDependencies": {
