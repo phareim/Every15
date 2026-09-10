@@ -7,12 +7,11 @@ compatibility_flags = ["nodejs_compat_v2"]
 bucket = ".output/public"
 
 # Own data — quarter-hour entries and settings, scoped per Reader user id.
-# The coordinator replaces REPLACE_DATABASE_ID with the real id of the
-# `every15-web` D1 database after creating it.
+# Provisioned 2026-09-10. Schema migrations run in GitHub Actions before deploy.
 [[d1_databases]]
 binding = "EVERY15_DB"
 database_name = "every15-web"
-database_id = "REPLACE_DATABASE_ID"
+database_id = "8772c212-82af-4400-b2c8-388594993066"
 migrations_dir = "migrations"
 
 # Reader's database — read-only session validation against the shared

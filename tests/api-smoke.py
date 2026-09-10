@@ -398,7 +398,7 @@ def main():
                     dangerous = False
                     for row in rows_csv[1:]:  # skip header
                         for cell in row:
-                            s = cell.lstrip("' \t\"")
+                            s = cell.lstrip(" \t\r\n")
                             if "SUM(A1:A2)" in cell and s[:1] in ("=", "+", "-", "@"):
                                 dangerous = True
                     if not dangerous:
