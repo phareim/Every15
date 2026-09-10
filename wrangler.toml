@@ -1,0 +1,31 @@
+name = "every15-web"
+main = ".output/server/index.mjs"
+compatibility_date = "2024-09-23"
+compatibility_flags = ["nodejs_compat_v2"]
+
+[site]
+bucket = ".output/public"
+
+# Own data — quarter-hour entries and settings, scoped per Reader user id.
+# The coordinator replaces REPLACE_DATABASE_ID with the real id of the
+# `every15-web` D1 database after creating it.
+[[d1_databases]]
+binding = "EVERY15_DB"
+database_name = "every15-web"
+database_id = "REPLACE_DATABASE_ID"
+migrations_dir = "migrations"
+
+# Reader's database — read-only session validation against the shared
+# "session"/"User" tables. Reader owns the schema; this app never writes.
+[[d1_databases]]
+binding = "DB"
+database_name = "reader-service"
+database_id = "2ccea3e6-cd78-45f5-9395-1094f964b273"
+
+[[routes]]
+pattern = "15.phareim.no"
+zone_name = "phareim.no"
+custom_domain = true
+
+[vars]
+NUXT_ALLOWED_USER_EMAILS = "phareim@gmail.com"
