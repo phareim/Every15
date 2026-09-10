@@ -90,6 +90,8 @@ export async function listEntries(
 /**
  * Idempotent upsert of one quarter: same user/date/time returns the same
  * row (createdAt kept, updatedAt bumped). Caller validates input first.
+ * Single statement — concurrent writes to the same quarter both succeed
+ * with the stable id instead of racing a SELECT-then-INSERT.
  */
 export async function upsertEntry(
   db: any,
@@ -97,38 +99,22 @@ export async function upsertEntry(
   input: { date: string; time: string; text: string; tags: string[] }
 ): Promise<Entry> {
   const now = new Date().toISOString()
-  const existing = await db
-    .prepare(`SELECT ${ENTRY_COLUMNS} FROM entries WHERE user_id = ? AND date = ? AND time = ?`)
-    .bind(userId, input.date, input.time)
-    .first()
-
-  if (existing) {
-    const row = existing as EntryRow
-    await db
-      .prepare('UPDATE entries SET text = ?, tags = ?, updated_at = ? WHERE id = ? AND user_id = ?')
-      .bind(input.text, JSON.stringify(input.tags), now, row.id, userId)
-      .run()
-    return { ...mapEntryRow(row), text: input.text, tags: input.tags, updatedAt: now }
-  }
-
   const id = globalThis.crypto?.randomUUID
     ? globalThis.crypto.randomUUID()
     : `${Date.now()}-${Math.random().toString(36).slice(2)}`
-  await db
+  const row = (await db
     .prepare(
-      `INSERT INTO entries (id, user_id, date, time, text, tags, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+      `INSERT INTO entries (id, user_id, date, time, text, tags, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+       ON CONFLICT (user_id, date, time) DO UPDATE SET
+         text = excluded.text,
+         tags = excluded.tags,
+         updated_at = excluded.updated_at
+       RETURNING ${ENTRY_COLUMNS}`
     )
     .bind(id, userId, input.date, input.time, input.text, JSON.stringify(input.tags), now, now)
-    .run()
-  return {
-    id,
-    date: input.date,
-    time: input.time,
-    text: input.text,
-    tags: input.tags,
-    createdAt: now,
-    updatedAt: now,
-  }
+    .first()) as EntryRow
+  return mapEntryRow(row)
 }
 
 /** Deletes one entry owned by the user. Returns false when nothing matched. */

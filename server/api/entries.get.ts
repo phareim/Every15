@@ -1,5 +1,5 @@
 import { requireAllowedUser } from '~/server/utils/readerSession'
-import { getEvery15Db } from '~/server/utils/cloudflare'
+import { getEvery15Db } from '~/server/utils/every15Db'
 import { listEntries } from '~/server/utils/db'
 import { validateDateRange } from '~/shared/validation'
 

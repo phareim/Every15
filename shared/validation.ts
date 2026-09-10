@@ -4,7 +4,6 @@
  * written to be shown to the user verbatim.
  */
 import {
-  DEFAULT_SETTINGS,
   type ReminderMinutes,
   type Settings,
 } from './types'
@@ -58,10 +57,14 @@ export function validateEntryInput(body: unknown): EntryInput {
   if (typeof text !== 'string') {
     throw badRequest('text must be a string.')
   }
-  if (text.length > MAX_TEXT_LENGTH) {
+  const trimmed = text.trim()
+  if (!trimmed) {
+    throw badRequest('text must not be blank.')
+  }
+  if (trimmed.length > MAX_TEXT_LENGTH) {
     throw badRequest(`text must be at most ${MAX_TEXT_LENGTH} characters.`)
   }
-  return { date, time, text, tags: validateTags(tags) }
+  return { date, time, text: trimmed, tags: validateTags(tags) }
 }
 
 export function validateTags(tags: unknown): string[] {
@@ -82,12 +85,27 @@ export function validateTags(tags: unknown): string[] {
 }
 
 /**
- * PUT accepts a full Settings object; missing fields fall back to defaults
- * so an older client never wipes a preference it does not know about.
+ * PUT requires a full Settings object; a missing field is a 400 so the
+ * server never silently resets a preference the client omitted. An empty
+ * workDays array is valid (pauses the schedule).
  */
+const REQUIRED_SETTINGS_FIELDS = [
+  'timezone',
+  'startTime',
+  'endTime',
+  'workDays',
+  'reminderMinutes',
+  'remindersEnabled',
+] as const
+
 export function validateSettings(body: unknown): Settings {
   if (!isRecord(body)) throw badRequest('Request body must be a JSON object.')
-  const merged: Record<string, unknown> = { ...DEFAULT_SETTINGS, ...body }
+  for (const field of REQUIRED_SETTINGS_FIELDS) {
+    if (!(field in body)) {
+      throw badRequest(`${field} is required.`)
+    }
+  }
+  const merged: Record<string, unknown> = body
 
   if (!isValidTimeZone(merged.timezone)) {
     throw badRequest('timezone must be a valid IANA name, e.g. Europe/Oslo.')

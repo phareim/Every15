@@ -31,8 +31,14 @@ describe('entry input', () => {
     expect(validateEntryInput(rest)).toEqual({ ...rest, tags: [] })
   })
 
-  it('allows empty text (a quarter can be honestly blank)', () => {
-    expect(validateEntryInput({ ...valid, text: '' }).text).toBe('')
+  it('trims outer whitespace from text', () => {
+    expect(validateEntryInput({ ...valid, text: '  Standup  ' }).text).toBe('Standup')
+  })
+
+  it('rejects blank or whitespace-only text', () => {
+    expectBadRequest(() => validateEntryInput({ ...valid, text: '' }), /blank/)
+    expectBadRequest(() => validateEntryInput({ ...valid, text: '   ' }), /blank/)
+    expectBadRequest(() => validateEntryInput({ ...valid, text: '\n\t ' }), /blank/)
   })
 
   it('rejects bad dates, times, and oversized text', () => {
@@ -83,15 +89,16 @@ describe('settings', () => {
     expect(validateSettings({ ...valid, workDays: [5, 1, 3] }).workDays).toEqual([1, 3, 5])
   })
 
-  it('fills missing fields from defaults', () => {
-    expect(validateSettings({})).toEqual({
-      timezone: 'Europe/Oslo',
-      startTime: '09:00',
-      endTime: '17:00',
-      workDays: [1, 2, 3, 4, 5],
-      reminderMinutes: 15,
-      remindersEnabled: false,
-    })
+  it('rejects missing fields instead of resetting them to defaults', () => {
+    expectBadRequest(() => validateSettings({}), /timezone is required/)
+    const { timezone, ...noTimezone } = valid
+    expectBadRequest(() => validateSettings(noTimezone), /timezone is required/)
+    const { remindersEnabled, ...noFlag } = valid
+    expectBadRequest(() => validateSettings(noFlag), /remindersEnabled is required/)
+  })
+
+  it('allows an empty workDays array (pauses the schedule)', () => {
+    expect(validateSettings({ ...valid, workDays: [] }).workDays).toEqual([])
   })
 
   it('rejects bad timezone, times, workdays, and reminder options', () => {

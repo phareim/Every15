@@ -1,7 +1,7 @@
 {
   "name": "every15-web",
   "version": "1.0.0",
-  "description": "Every15 on the web — a personal quarter-hour journal behind Reader's login",
+  "description": "Every15 on the web \u2014 a personal quarter-hour journal behind Reader's login",
   "private": true,
   "scripts": {
     "dev": "nuxt dev",
@@ -35,6 +35,9 @@
     "testMatch": [
       "**/domain*.test.ts"
     ],
+    "moduleNameMapper": {
+      "^~/(.*)$": "<rootDir>/$1"
+    },
     "transform": {
       "^.+\\.tsx?$": [
         "ts-jest",
