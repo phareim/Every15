@@ -1,0 +1,207 @@
+/* Fifteen — app layer on top of the vendored Tufte base (assets/css/tufte.css).
+   Warm tactile paper sheet on a muted desk, quiet rules, one crimson action.
+   English UI, no emoji. Numbers tabular, prose ET Book serif. */
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: 1px solid var(--tufte-accent);
+  outline-offset: 2px;
+}
+
+/* Semantic color shims. The UI reads the Tufte tokens directly so it stays
+   correct whether or not the framework ships the Do tailwind preset. */
+.text-mute { color: var(--text-muted); }
+.text-faint { color: var(--tufte-muted); }
+.text-ink { color: var(--tufte-ink); }
+.text-accent-ink { color: var(--text-accent); }
+.border-rule { border-color: var(--border-rule); }
+.border-rule-strong { border-color: var(--border-strong); }
+.border-accent { border-color: var(--border-accent); }
+.hover\:text-ink:hover { color: var(--tufte-ink); }
+.hover\:border-rule-strong:hover { border-color: var(--border-strong); }
+
+/* Times and counts align in columns. */
+.tnum {
+  font-family: 'SF Mono', ui-monospace, Menlo, Consolas, monospace;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0;
+}
+
+/* Hairline-underlined text inputs, the Reader/Do convention. */
+.tufte-input {
+  width: 100%;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--border-rule);
+  color: var(--text-strong);
+  font-family: 'et-book', Charter, Georgia, serif;
+  font-size: 16px;
+  line-height: 1.55;
+  padding: 6px 0;
+  outline: none;
+}
+.tufte-input:focus {
+  border-bottom-color: var(--tufte-accent);
+  outline: none;
+}
+textarea.tufte-input {
+  resize: vertical;
+  min-height: 4.5em;
+}
+select.tufte-input {
+  width: auto;
+}
+
+/* A page is one sheet lying on the desk: it fills the screen even when the
+   day is empty, so an empty journal is still a sheet, not a scrap. */
+.page-sheet {
+  min-height: calc(100dvh - 12rem);
+}
+
+.tufte-tactile .hairline {
+  height: 2px;
+  border: 0;
+  background: var(--rule-deboss);
+}
+.tufte-tactile .hairline--desk {
+  background: var(--rule-emboss);
+}
+
+/* Bordered chip button: a paper button pressed into whatever it sits on. */
+.tufte-tactile .action-label {
+  background: var(--surface-button);
+  box-shadow: var(--press-secondary);
+  text-shadow: var(--text-press);
+  color: var(--ink-quiet);
+  border-color: var(--rule-strong);
+  --text-accent: var(--accent-ink);
+}
+.tufte-tactile .action-label:hover:not(:disabled) {
+  color: var(--tufte-ink);
+  border-color: var(--rule-strong);
+}
+.tufte-tactile .action-label.action-label--accent {
+  color: var(--accent-ink);
+  border-color: var(--tufte-accent);
+}
+.tufte-tactile .action-label:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+/* Text input: a shallow well pressed into the paper. */
+.tufte-tactile .tufte-input {
+  background: var(--paper-sunk);
+  box-shadow: var(--press-secondary);
+  border-bottom-color: transparent;
+  padding-left: 0.5rem;
+  padding-right: 0.5rem;
+}
+.tufte-tactile .tufte-input:focus {
+  border-bottom-color: var(--tufte-accent);
+}
+
+/* Zero-based bars: the bar is the measure, the label sits on it. */
+.bar-row {
+  display: grid;
+  grid-template-columns: minmax(7em, 12em) 1fr auto;
+  gap: 0.5rem 0.75rem;
+  align-items: baseline;
+  padding: 0.3rem 0;
+  border-bottom: 1px solid var(--border-rule);
+}
+.bar-track {
+  position: relative;
+  height: 0.55em;
+  background: transparent;
+  border-bottom: 1px solid var(--border-strong);
+}
+.bar-fill {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  top: 0.1em;
+  background: var(--tufte-ink);
+  min-width: 2px;
+}
+.bar-fill--accent {
+  background: var(--tufte-accent);
+}
+
+/* Missing-quarter buttons: quiet chips that jump the composer. */
+.quarter-chip {
+  font-family: 'SF Mono', ui-monospace, Menlo, Consolas, monospace;
+  font-size: 12px;
+  border: 1px solid var(--border-rule);
+  color: var(--text-muted);
+  background: transparent;
+  border-radius: 2px;
+  padding: 2px 8px;
+  cursor: pointer;
+}
+.quarter-chip:hover {
+  color: var(--text-strong);
+  border-color: var(--border-strong);
+}
+
+/* Entry rows: one rule per entry, no boxes. */
+.entry-row {
+  padding: 0.6rem 0;
+  border-bottom: 1px solid var(--border-rule);
+}
+.entry-row--pending {
+  opacity: 0.65;
+}
+
+/* Top navigation sits on the desk above the sheet. */
+.desk-nav a {
+  font-family: 'SF Mono', ui-monospace, Menlo, Consolas, monospace;
+  text-transform: uppercase;
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  color: var(--text-muted);
+  text-decoration: none;
+  padding-bottom: 2px;
+  border-bottom: 1px solid transparent;
+}
+.desk-nav a:hover {
+  color: var(--text-strong);
+}
+.desk-nav a.router-link-active {
+  color: var(--text-accent);
+  border-bottom-color: var(--tufte-accent);
+}
+
+/* Error text reuses the crimson family; success is plain prose, no hue. */
+.field-error {
+  color: var(--text-accent);
+  font-size: 13px;
+  font-style: italic;
+}
+.form-hint {
+  color: var(--text-muted);
+  font-size: 13px;
+  font-style: italic;
+}
+
+/* Narrow screens: the sheet edge-to-edge, bars stack under labels. */
+@media (max-width: 560px) {
+  .bar-row {
+    grid-template-columns: 1fr auto;
+  }
+  .bar-track {
+    grid-column: 1 / -1;
+    order: 3;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition: none !important;
+    animation: none !important;
+  }
+}
