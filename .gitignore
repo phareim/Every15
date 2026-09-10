@@ -14,3 +14,10 @@ DerivedData/
 # OS
 .DS_Store
 Thumbs.db
+
+# Nuxt
+.nuxt/
+.output/
+coverage/
+test-results/
+playwright-report/
