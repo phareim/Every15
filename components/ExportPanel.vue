@@ -1,17 +1,17 @@
 <template>
-  <section aria-label="Export" class="mt-8">
+  <section aria-label="Export" class="export-block">
     <MonoLabel dash>Export</MonoLabel>
-    <form class="mt-2 flex flex-wrap items-end gap-x-4 gap-y-3" @submit.prevent="onDownload">
-      <div>
-        <label class="tnum block text-xs text-mute" for="export-from">From</label>
+    <form class="export-form" @submit.prevent="onDownload">
+      <div class="field-inline">
+        <label class="field-label tnum" for="export-from">From</label>
         <input id="export-from" v-model="from" type="date" class="tufte-input tnum" :max="to" />
       </div>
-      <div>
-        <label class="tnum block text-xs text-mute" for="export-to">To</label>
+      <div class="field-inline">
+        <label class="field-label tnum" for="export-to">To</label>
         <input id="export-to" v-model="to" type="date" class="tufte-input tnum" :min="from" :max="today" />
       </div>
-      <div>
-        <label class="tnum block text-xs text-mute" for="export-format">Format</label>
+      <div class="field-inline">
+        <label class="field-label tnum" for="export-format">Format</label>
         <select id="export-format" v-model="format" class="tufte-input tnum">
           <option value="csv">CSV</option>
           <option value="json">JSON</option>
@@ -21,8 +21,8 @@
         {{ downloading ? 'Preparing' : 'Download' }}
       </ActionLabel>
     </form>
-    <p v-if="error" role="alert" class="field-error mt-2">{{ error }}</p>
-    <p class="form-hint mt-2">Up to 366 days. CSV cells are quoted and formula-safe.</p>
+    <p v-if="error" role="alert" class="field-error notice">{{ error }}</p>
+    <p class="form-hint notice">Up to 366 days. CSV cells are quoted and formula-safe.</p>
   </section>
 </template>
 

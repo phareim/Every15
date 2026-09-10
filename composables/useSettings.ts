@@ -35,8 +35,8 @@ export function useSettings() {
       return data.settings
     } catch (err) {
       if (seq === loadSeq) {
-        // Honest fallback: local defaults keep the journal usable and every
-        // label says what it is. The banner on the page reports the failure.
+        // Honest fallback: the daytime fallback keeps the journal usable and
+        // the banner on the page reports the failure.
         if (!settings.value) settings.value = defaultSettings() as Settings
         loadError.value = err instanceof Error ? err.message : 'Could not load preferences.'
       }
@@ -70,7 +70,7 @@ export function useSettings() {
     }
   }
 
-  /** Settings for wall-clock math: loaded settings, else contract defaults. */
+  /** Settings for wall-clock math: loaded settings, else the daytime fallback. */
   const effective = computed<Settings>(() => settings.value ?? (defaultSettings() as Settings))
 
   return { settings, effective, loading, saving, loadError, saveError, savedAt, fetchSettings, saveSettings }

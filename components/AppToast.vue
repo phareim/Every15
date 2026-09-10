@@ -3,21 +3,21 @@
     v-if="toast"
     role="status"
     aria-live="polite"
-    class="tufte-sheet fixed bottom-4 left-1/2 z-50 w-[calc(100%-2rem)] max-w-md -translate-x-1/2 px-4 py-3"
+    class="tufte-sheet toast-card"
   >
-    <div class="flex items-center justify-between gap-3">
-      <p class="text-sm italic" :class="toast.kind === 'error' ? 'text-accent-ink not-italic' : ''">
+    <div class="toast-row">
+      <p class="toast-msg" :class="toast.kind === 'error' ? 'toast-msg--error' : ''">
         {{ toast.message }}
       </p>
-      <div class="flex shrink-0 items-center gap-3">
+      <div class="toast-tools">
         <button
           v-if="toast.actionLabel === 'Undo'"
           type="button"
-          class="tnum text-xs underline"
+          class="tnum tool-link"
           :disabled="undoing"
           @click="onUndo"
         >Undo</button>
-        <button type="button" class="tnum text-xs underline" aria-label="Dismiss message" @click="dismiss">
+        <button type="button" class="tnum tool-link" aria-label="Dismiss message" @click="dismiss">
           Dismiss
         </button>
       </div>
@@ -26,7 +26,7 @@
 </template>
 
 <script setup lang="ts">
-const { toast, dismiss, show, showError } = useToast()
+const { toast, dismiss, show } = useToast()
 const { undoDelete } = useEntries()
 const undoing = ref(false)
 
@@ -37,10 +37,13 @@ async function onUndo() {
     const restored = await undoDelete()
     if (restored) show('Entry restored.')
     else show('Nothing left to undo.')
-  } catch (err) {
-    showError(err instanceof Error ? err.message : 'Could not restore the entry.')
+  } catch {
+    // The snapshot is kept, so this same button retries the restore.
+    show('Could not restore — try again.', 'error', 'Undo')
   } finally {
     undoing.value = false
   }
 }
+
+void showError
 </script>

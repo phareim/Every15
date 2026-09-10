@@ -1,40 +1,40 @@
 <template>
   <div>
     <MonoLabel dash>Week review</MonoLabel>
-    <h1 class="mt-1 text-2xl leading-tight">{{ weekTitle }}</h1>
-    <p class="tnum mt-1 text-sm text-mute">
+    <h1 class="page-title">{{ weekTitle }}</h1>
+    <p class="tnum week-count">
       {{ weekTotal }} {{ weekTotal === 1 ? 'entry' : 'entries' }} &middot; {{ fmtDuration(weekTotal) }}
     </p>
 
-    <nav class="mt-3 flex items-center gap-x-3" aria-label="Week navigation">
-      <ActionLabel @click="offset--" aria-label="Previous week">&lsaquo; Prev</ActionLabel>
+    <nav class="week-nav" aria-label="Week navigation">
+      <ActionLabel @click="offset--" aria-label="Previous week">‹ Prev</ActionLabel>
       <ActionLabel v-if="offset !== 0" @click="offset = 0">This week</ActionLabel>
-      <ActionLabel @click="offset++" :disabled="offset >= 0" aria-label="Next week">Next &rsaquo;</ActionLabel>
+      <ActionLabel :disabled="offset >= 0" aria-label="Next week" @click="offset++">Next ›</ActionLabel>
     </nav>
 
-    <p v-if="rangeError" role="alert" class="field-error mt-3">
-      The week would not load ({{ rangeError }}).
-      <button type="button" class="underline" @click="reload">Try again</button>
+    <p v-if="rangeError" role="alert" class="field-error notice">
+      Couldn't load this week ({{ rangeError }}).
+      <button type="button" class="link" @click="reload">Try again</button>
     </p>
 
-    <section aria-label="Days" class="mt-5">
-      <ul role="list" class="border-t border-rule">
+    <section aria-label="Days" class="week-days">
+      <ul role="list" class="history-list">
         <li v-for="d in dayRows" :key="d.day" class="entry-row">
-          <NuxtLink :to="`/?date=${d.day}`" class="flex items-baseline gap-3 no-underline">
-            <span class="w-24 shrink-0 text-sm">{{ d.label }}</span>
-            <span class="bar-track flex-1" aria-hidden="true">
+          <NuxtLink :to="`/?date=${d.day}`" class="history-link">
+            <span class="week-day">{{ d.label }}</span>
+            <span class="bar-track week-bar" aria-hidden="true">
               <span
                 class="bar-fill"
                 :style="{ width: `${dayMax === 0 ? 0 : (d.count / dayMax) * 100}%` }"
               />
             </span>
-            <span class="tnum w-28 shrink-0 text-right text-sm text-mute">{{ d.caption }}</span>
+            <span class="tnum week-caption">{{ d.caption }}</span>
           </NuxtLink>
         </li>
       </ul>
     </section>
 
-    <section aria-label="Time by tag" class="mt-6">
+    <section aria-label="Time by tag" class="week-tags">
       <WeekBars label="Time by tag" :caption="weekTitle" :rows="tagRows" />
     </section>
   </div>
@@ -84,7 +84,7 @@ async function reload(): Promise<void> {
   try {
     await fetchRange(days.value[0], days.value[6])
   } catch {
-    showError('The week still would not load.')
+    showError('Still not loading.')
   }
 }
 
@@ -95,7 +95,7 @@ onMounted(async () => {
     await fetchSettings()
     today.value = dayInZone(effective.value.timezone)
   } catch {
-    /* contract default stands */
+    /* the daytime fallback stands */
   }
   await reload()
 })

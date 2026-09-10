@@ -1,17 +1,17 @@
 <template>
   <div>
-    <p v-if="authBlocked" class="mt-4">
-      <a class="underline" :href="loginHref">Sign in with Reader</a> to log quarter-hours.
+    <p v-if="signedOut" class="auth-prompt">
+      <a class="link" :href="loginHref">Sign in with Reader</a> to log quarter-hours.
     </p>
     <template v-else>
       <DayNavigator :day="day" :today="today" :count="dayEntries.length" @change="goDay" />
 
-      <p v-if="settingsError" role="alert" class="field-error mt-3">
-        Preferences would not load ({{ settingsError }}). Showing defaults for Europe/Oslo.
+      <p v-if="settingsError" role="alert" class="field-error notice">
+        Preferences couldn't load ({{ settingsError }}). Using the usual 09:00–17:00 weekday setup meanwhile.
       </p>
-      <p v-if="rangeError" role="alert" class="field-error mt-3">
-        Entries would not load ({{ rangeError }}).
-        <button type="button" class="underline" @click="reload">Try again</button>
+      <p v-if="rangeError" role="alert" class="field-error notice">
+        Entries couldn't load ({{ rangeError }}).
+        <button type="button" class="link" @click="reload">Try again</button>
       </p>
 
       <ReminderStrip :due="reminder.due" :missing="reminder.missing" @jump="jumpTo" />
@@ -22,6 +22,8 @@
         :quarter="quarter"
         :quarters="allQuarters"
         :entries="dayEntries"
+        :current-quarter="isLiveDay ? currentQuarter : null"
+        :is-today="isLiveDay"
         @save="onSave"
         @quarter-change="quarter = $event"
       />
@@ -41,6 +43,7 @@
 
 <script setup lang="ts">
 import {
+  backfillQuarters,
   dayInZone,
   floorQuarter,
   isDayString,
@@ -52,19 +55,32 @@ import type { Entry } from '~/composables/useEntries'
 
 const route = useRoute()
 const router = useRouter()
+// Foundation-owned session; the auth middleware keeps it fresh, so the page
+// only reads the reactive state — no fetching here.
+const auth = useAuth() as unknown as {
+  user: { value: { id: string; email: string } | null }
+  checked: { value: boolean }
+  loginUrl: () => string
+}
 const { effective, fetchSettings, loadError } = useSettings()
 const { entriesForDay, fetchRange, saveEntry, deleteEntry, loading, rangeError, pending } = useEntries()
-const { setUserId } = useDrafts()
+const { setUserId, hasDraft } = useDrafts()
 const { show, showError } = useToast()
 
-const loginHref = ref('https://reader.phareim.no/login')
-const authBlocked = ref(false)
+const loginHref = computed(() => {
+  try {
+    return auth.loginUrl()
+  } catch {
+    return 'https://reader.phareim.no/login'
+  }
+})
+const signedOut = computed(() => auth.checked.value && !auth.user.value)
 const settingsError = computed(() => loadError.value)
 
 const allQuarters = quarterRange('00:00', '24:00')
 
 // The clock ticks in the settings zone; before preferences load the
-// contract default (Europe/Oslo) answers "today".
+// daytime fallback (Europe/Oslo) answers "today".
 const { today, nowTime, start, stop } = useNow(() => effective.value.timezone)
 
 const day = ref<string>(
@@ -73,27 +89,51 @@ const day = ref<string>(
     : dayInZone(effective.value.timezone),
 )
 const quarter = ref('09:00')
-const composer = ref<{ noteSaved: () => void; restore: () => void; focus: () => void } | null>(null)
+const composer = ref<{
+  noteSaved: () => void
+  noteSavedFor: (date: string, time: string) => void
+  restore: () => void
+  isPristine: () => boolean
+  focus: () => void
+} | null>(null)
+
+watch(
+  () => auth.user.value,
+  (u) => setUserId(u?.id ?? 'anon'),
+  { immediate: true },
+)
 
 const dayEntries = computed<Entry[]>(() => entriesForDay(day.value))
-
-const loggedSet = computed(() => new Set(dayEntries.value.map((e) => e.time)))
+const loggedTimes = computed(() => dayEntries.value.map((e) => e.time))
+const isLiveDay = computed(() => day.value === today.value)
+const currentQuarter = computed(() => floorQuarter(nowTime.value))
 const windowQuarters = computed(() =>
   quarterRange(effective.value.startTime, effective.value.endTime),
 )
-/** Every unlogged work-window quarter: the backfill entry points. */
-const backfill = computed(() => windowQuarters.value.filter((q) => !loggedSet.value.has(q)))
+/** Unlogged work-window quarters: past days list all, today only through now. */
+const backfill = computed(() =>
+  backfillQuarters(effective.value, day.value, today.value, nowTime.value, loggedTimes.value),
+)
 
 const reminder = computed(() =>
   computeReminders(effective.value, day.value, today.value, nowTime.value, dayEntries.value),
 )
 
 function defaultQuarter(): string {
-  if (day.value === today.value) {
+  if (isLiveDay.value) {
     const current = floorQuarter(timeInZone(effective.value.timezone))
-    if (!loggedSet.value.has(current)) return current
+    if (windowQuarters.value.includes(current) && !loggedTimes.value.includes(current)) return current
   }
   return backfill.value[0] ?? effective.value.startTime
+}
+
+function composerPristine(): boolean {
+  try {
+    if (composer.value) return composer.value.isPristine()
+  } catch {
+    /* fall through to the draft check */
+  }
+  return !hasDraft(day.value, quarter.value)
 }
 
 function goDay(next: string): void {
@@ -104,7 +144,7 @@ async function reload(): Promise<void> {
   try {
     await fetchRange(day.value, day.value)
   } catch {
-    showError('Entries still would not load.')
+    showError('Entries still not loading.')
   }
 }
 
@@ -121,6 +161,24 @@ watch(
   },
 )
 
+// Midnight and the current quarter advance while the page stays open: follow
+// the live day when the composer is pristine, never while typing.
+watch(today, (t) => {
+  if (day.value !== t) {
+    if (!composerPristine()) return
+    day.value = t
+    quarter.value = defaultQuarter()
+    reload()
+  }
+})
+watch(nowTime, () => {
+  if (!isLiveDay.value || !composerPristine()) return
+  const cq = floorQuarter(nowTime.value)
+  if (windowQuarters.value.includes(cq) && cq !== quarter.value) {
+    quarter.value = cq
+  }
+})
+
 function jumpTo(q: string): void {
   quarter.value = q
   nextTick(() => composer.value?.focus())
@@ -136,13 +194,20 @@ function onEdit(entry: Entry): void {
 }
 
 async function onSave(input: { date: string; time: string; text: string; tags: string[] }): Promise<void> {
+  // Capture the slot now: the user may move on while the request flies, and
+  // the draft cleared must be that slot's — not whichever is selected after.
+  const slot = { date: input.date, time: input.time }
   try {
     await saveEntry(input)
-    composer.value?.noteSaved()
+    try {
+      composer.value?.noteSavedFor(slot.date, slot.time)
+    } catch {
+      /* the entry is saved; the draft key below is best-effort */
+    }
     show(`Saved ${input.time}.`)
-  } catch {
-    // The draft stays in localStorage; the composer's error line names it.
-    showError('Saving failed — the draft is kept below.')
+  } catch (err) {
+    const why = err instanceof Error ? err.message : 'Could not save this quarter.'
+    showError(`Saving failed (${why}) — the draft is kept below.`)
   }
 }
 
@@ -157,31 +222,9 @@ async function onRemove(entry: Entry): Promise<void> {
 
 onMounted(async () => {
   try {
-    const auth = (useAuth as unknown as () => {
-      user: { value: { id: string; email: string } | null }
-      checked: { value: boolean }
-      fetchSession: () => Promise<unknown>
-      loginUrl: () => string
-    })()
-    await auth.fetchSession()
-    if (!auth.user.value) {
-      authBlocked.value = true
-      return
-    }
-    setUserId(auth.user.value.id)
-    try {
-      loginHref.value = auth.loginUrl()
-    } catch {
-      /* keep fallback */
-    }
-  } catch {
-    // Foundation auth not yet merged: keep the page usable against the API;
-    // the coordinator wires the real session.
-  }
-  try {
     await fetchSettings()
   } catch {
-    /* effective falls back to contract defaults; banner above says so */
+    /* the daytime fallback stands; the banner above says so */
   }
   if (typeof route.query.date !== 'string' || !isDayString(route.query.date)) {
     day.value = today.value

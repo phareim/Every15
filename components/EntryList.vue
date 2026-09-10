@@ -1,15 +1,15 @@
 <template>
-  <section aria-label="Journal" class="mt-6">
-    <div class="flex items-baseline justify-between">
+  <section aria-label="Journal" class="journal">
+    <div class="row-between">
       <MonoLabel dash>Journal</MonoLabel>
       <MonoLabel>{{ entries.length }} {{ entries.length === 1 ? 'quarter' : 'quarters' }}</MonoLabel>
     </div>
-    <HairlineRule class="mt-2" />
+    <HairlineRule class="rule-gap" />
 
-    <p v-if="loading && entries.length === 0" class="mt-6 italic text-mute">Loading the day…</p>
-    <div v-else-if="entries.length === 0" class="mt-6">
-      <p class="text-lg">Nothing logged yet.</p>
-      <p class="mt-1 italic text-mute">The composer above is waiting. One line per quarter-hour is the whole practice.</p>
+    <p v-if="loading && entries.length === 0" class="muted-italic journal-gap">Loading the day…</p>
+    <div v-else-if="entries.length === 0" class="journal-gap">
+      <p class="journal-empty">Nothing logged yet.</p>
+      <p class="muted-italic journal-hint">The composer above is waiting. One line per quarter-hour is the whole practice.</p>
     </div>
     <ul v-else role="list">
       <li
@@ -18,47 +18,47 @@
         class="entry-row"
         :class="pendingMap[`${entry.date} ${entry.time}`] ? 'entry-row--pending' : ''"
       >
-        <div class="flex items-baseline gap-3">
-          <span class="tnum shrink-0 text-sm" aria-label="Quarter starting">{{ entry.time }}</span>
-          <p class="flex-1 leading-snug">{{ entry.text }}</p>
-          <span class="flex shrink-0 items-center gap-3">
+        <div class="entry-top">
+          <span class="tnum entry-time" aria-label="Quarter starting">{{ entry.time }}</span>
+          <p class="entry-text">{{ entry.text }}</p>
+          <span class="entry-tools">
             <button
               type="button"
-              class="tnum text-xs text-mute underline hover:text-ink"
+              class="tnum tool-link"
               :disabled="!!pendingMap[`${entry.date} ${entry.time}`]"
               @click="emit('edit', entry)"
             >Edit</button>
             <button
               v-if="confirmingId !== entry.id"
               type="button"
-              class="tnum text-xs text-mute underline hover:text-ink"
+              class="tnum tool-link"
               :disabled="!!pendingMap[`${entry.date} ${entry.time}`]"
               @click="confirmingId = entry.id"
             >Delete</button>
-            <span v-else class="flex items-center gap-2" role="group" aria-label="Confirm delete">
-              <span class="text-xs italic text-mute">Delete?</span>
+            <span v-else class="confirm-group" role="group" aria-label="Confirm delete">
+              <span class="confirm-q">Delete?</span>
               <button
                 type="button"
-                class="tnum text-xs text-accent-ink underline"
+                class="tnum tool-link tool-danger"
                 @click="emit('remove', entry); confirmingId = null"
               >Yes</button>
               <button
                 type="button"
-                class="tnum text-xs text-mute underline"
+                class="tnum tool-link"
                 @click="confirmingId = null"
               >Keep</button>
             </span>
           </span>
         </div>
-        <p v-if="entry.tags.length > 0" class="tnum mt-1 pl-14 text-xs text-faint">
+        <p v-if="entry.tags.length > 0" class="tnum entry-tags">
           {{ entry.tags.join(' · ') }}
         </p>
       </li>
     </ul>
 
-    <div v-if="missing.length > 0" class="mt-5">
+    <div v-if="missing.length > 0" class="chip-block">
       <MonoLabel>Unlogged in the work window</MonoLabel>
-      <p class="mt-2 flex flex-wrap gap-2" role="group" aria-label="Unlogged quarters">
+      <p class="chip-row" role="group" aria-label="Unlogged quarters">
         <button
           v-for="q in missing"
           :key="q"

@@ -163,25 +163,31 @@ export function weekDays(day) {
   return Array.from({ length: 7 }, (_, i) => addDays(start, i))
 }
 
+const WEEKDAYS_LONG = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+const WEEKDAYS_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+const MONTHS_LONG = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
+]
+const MONTHS_SHORT = [
+  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+]
+
 /** @param {string} day @returns {string} e.g. 'Thursday 10 September 2026' */
 export function longDayLabel(day) {
+  // Built from UTC parts, not Intl: identical in every browser and zone —
+  // Pacific/Kiritimati must never push the label to the next day.
   const [y, m, d] = day.split('-').map(Number)
-  return new Intl.DateTimeFormat('en-GB', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  }).format(new Date(Date.UTC(y, m - 1, d, 12)))
+  const dt = new Date(Date.UTC(y, m - 1, d, 12))
+  return `${WEEKDAYS_LONG[dt.getUTCDay()]} ${d} ${MONTHS_LONG[m - 1]} ${y}`
 }
 
 /** @param {string} day @returns {string} e.g. 'Thu 10 Sep' */
 export function shortDayLabel(day) {
   const [y, m, d] = day.split('-').map(Number)
-  return new Intl.DateTimeFormat('en-GB', {
-    weekday: 'short',
-    day: 'numeric',
-    month: 'short',
-  }).format(new Date(Date.UTC(y, m - 1, d, 12)))
+  const dt = new Date(Date.UTC(y, m - 1, d, 12))
+  return `${WEEKDAYS_SHORT[dt.getUTCDay()]} ${d} ${MONTHS_SHORT[m - 1]}`
 }
 
 /**
@@ -277,11 +283,13 @@ export function validateSettings(s) {
   const errs = []
   if (!isValidTimeZone(s.timezone)) errs.push('Use a valid IANA timezone, e.g. Europe/Oslo.')
   if (!isQuarterTime(s.startTime)) errs.push('Work starts on a quarter-hour (HH:mm).')
-  if (!isQuarterTime(s.endTime) && s.endTime !== '24:00') errs.push('Work ends on a quarter-hour (HH:mm).')
+  // The API contract accepts quarter-hour HH:mm times only — '24:00' is a
+  // display convenience, not a valid setting, so the form never offers it.
+  if (!isQuarterTime(s.endTime)) errs.push('Work ends on a quarter-hour (HH:mm).')
   if (
-    (isQuarterTime(s.startTime) || s.startTime === '00:00') &&
-    (isQuarterTime(s.endTime) || s.endTime === '24:00') &&
-    toMinutes(s.startTime) >= (s.endTime === '24:00' ? 1440 : toMinutes(s.endTime))
+    isQuarterTime(s.startTime) &&
+    isQuarterTime(s.endTime) &&
+    toMinutes(s.startTime) >= toMinutes(s.endTime)
   ) {
     errs.push('The workday must start before it ends.')
   }
@@ -309,4 +317,78 @@ export function defaultSettings() {
 /** Storage key for a local draft. Drafts survive failed saves and navigation. */
 export function draftKey(userId, date, time) {
   return `fifteen:draft:${userId || 'anon'}:${date}:${time}`
+}
+
+/**
+ * Monday=1..Sunday=0 workday of a wall-clock day (matches Settings.workDays).
+ * @param {string} day 'YYYY-MM-DD'
+ */
+export function workdayOf(day) {
+  const [y, m, d] = day.split('-').map(Number)
+  return new Date(Date.UTC(y, m - 1, d, 12)).getUTCDay()
+}
+
+/**
+ * The exact quarter before a slot, rolling over midnight to the previous day.
+ * @param {string} date 'YYYY-MM-DD'
+ * @param {string} time 'HH:mm'
+ */
+export function previousQuarterSlot(date, time) {
+  const mins = toMinutes(time) - 15
+  if (mins < 0) return { date: addDays(date, -1), time: '23:45' }
+  return { date, time: toHHMM(mins) }
+}
+
+/**
+ * Unlogged work-window quarters worth pointing at. Past days list every
+ * unlogged quarter; today lists only quarters through the current one, so
+ * the future never reads as missing. Future days and non-workdays list
+ * nothing. Pure — the day page and the reminder check share it.
+ * @param {{ startTime: string, endTime: string, workDays: number[] }} settings
+ * @param {string} day the viewed day
+ * @param {string} today wall-clock today in the settings zone
+ * @param {string} nowTime wall-clock HH:mm in the settings zone
+ * @param {string[]} loggedTimes quarter times already logged for day
+ * @returns {string[]}
+ */
+export function backfillQuarters(settings, day, today, nowTime, loggedTimes) {
+  const window = quarterRange(settings.startTime, settings.endTime)
+  if (window.length === 0) return []
+  if (!settings.workDays.includes(workdayOf(day))) return []
+  if (compareDays(day, today) > 0) return []
+  const logged = new Set(loggedTimes)
+  if (compareDays(day, today) < 0) return window.filter((q) => !logged.has(q))
+  const current = floorQuarter(nowTime)
+  const cutoff = toMinutes(current)
+  return window.filter((q) => !logged.has(q) && toMinutes(q) <= cutoff)
+}
+
+/**
+ * Which quarter deserves a timed nudge right now, if any. The cadence
+ * (15/30/60) picks boundaries — every quarter, :00/:30, or :00 — inside the
+ * work window on workdays, and only for quarters with no entry yet. The
+ * caller dedupes per boundary so a nudge fires once. Pure and testable.
+ * @param {{ startTime: string, endTime: string, workDays: number[], reminderMinutes: number, remindersEnabled: boolean }} settings
+ * @param {string} day the viewed day (must be today to nudge)
+ * @param {string} today wall-clock today in the settings zone
+ * @param {string} nowTime wall-clock HH:mm in the settings zone
+ * @param {string[]} loggedTimes quarter times already logged for day
+ * @returns {string|null} the quarter to announce, or null
+ */
+export function notificationTarget(settings, day, today, nowTime, loggedTimes) {
+  if (!settings.remindersEnabled) return null
+  if (day !== today) return null
+  if (!settings.workDays.includes(workdayOf(day))) return null
+  const window = quarterRange(settings.startTime, settings.endTime)
+  if (window.length === 0) return null
+  const q = floorQuarter(nowTime)
+  if (!window.includes(q)) return null
+  if (loggedTimes.includes(q)) return null
+  if (toMinutes(q) % settings.reminderMinutes !== 0) return null
+  return q
+}
+
+/** Dedupe key so one boundary notifies once, across remounts. */
+export function notifiedKey(userId, day, time) {
+  return `fifteen:notified:${userId || 'anon'}:${day}:${time}`
 }

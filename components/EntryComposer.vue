@@ -1,10 +1,10 @@
 <template>
-  <section aria-label="Entry composer" class="mt-5">
+  <section aria-label="Entry composer" class="composer">
     <MonoLabel dash accent>Now logging</MonoLabel>
-    <form class="mt-2" @submit.prevent="onSave">
-      <div class="flex flex-wrap items-end gap-x-4 gap-y-3">
-        <div>
-          <label class="tnum block text-xs text-mute" for="composer-quarter">Quarter</label>
+    <form class="composer-form" @submit.prevent="onSave" @keydown.ctrl.enter="onSave" @keydown.meta.enter="onSave">
+      <div class="composer-top">
+        <div class="field-inline">
+          <label class="field-label tnum" for="composer-quarter">Quarter</label>
           <select
             id="composer-quarter"
             v-model="quarter"
@@ -16,16 +16,26 @@
             </option>
           </select>
         </div>
-        <p v-if="editingExisting" class="form-hint">Saving overwrites the {{ quarter }} entry.</p>
-        <span class="flex-1" />
+        <div class="composer-steps" role="group" aria-label="Move between quarters">
+          <ActionLabel :disabled="saving || stepIndex <= 0" aria-label="Previous quarter" @click="stepQuarter(-1)">‹ Prev</ActionLabel>
+          <ActionLabel
+            v-if="isToday && currentQuarter && quarters.includes(currentQuarter)"
+            :disabled="saving || quarter === currentQuarter"
+            aria-label="Jump to the current quarter"
+            @click="jumpNow"
+          >Now</ActionLabel>
+          <ActionLabel :disabled="saving || stepIndex >= quarters.length - 1" aria-label="Next quarter" @click="stepQuarter(1)">Next ›</ActionLabel>
+        </div>
+        <span class="spacer" />
         <ActionLabel
-          v-if="previousText && !text"
+          v-if="continueTarget"
+          :aria-label="continueExact ? 'Continue previous entry' : 'Reuse last entry'"
           @click="continuePrevious"
-          aria-label="Continue previous entry"
-        >Continue previous</ActionLabel>
+        >{{ continueExact ? 'Continue previous' : 'Reuse last entry' }}</ActionLabel>
       </div>
+      <p v-if="editingExisting" class="form-hint composer-note">Saving overwrites the {{ quarter }} entry.</p>
 
-      <label class="mt-3 block text-xs text-mute" for="composer-text">What did the quarter hold</label>
+      <label class="field-label mt-field" for="composer-text">What did the quarter hold</label>
       <textarea
         id="composer-text"
         ref="textArea"
@@ -38,7 +48,7 @@
         aria-describedby="composer-count composer-error"
       />
 
-      <label class="mt-3 block text-xs text-mute" for="composer-tags">Tags, comma separated, optional</label>
+      <label class="field-label mt-field" for="composer-tags">Tags, comma separated, optional</label>
       <input
         id="composer-tags"
         v-model="tagsRaw"
@@ -49,14 +59,15 @@
         aria-describedby="composer-error"
       />
 
-      <div class="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2">
+      <div class="composer-actions">
         <ActionLabel accent :disabled="saving || !canSave" @click="onSave">
           {{ saving ? 'Saving' : editingExisting ? 'Overwrite' : 'Save quarter' }}
         </ActionLabel>
-        <span id="composer-count" class="tnum text-xs text-faint">{{ text.trim().length }} / 2000</span>
+        <span id="composer-count" class="tnum count-note">{{ text.trim().length }} / 2000</span>
         <span v-if="saveError" id="composer-error" role="alert" class="field-error">{{ saveError }}</span>
       </div>
-      <ul v-if="validation.length > 0" class="mt-2" aria-label="What to fix">
+      <p class="form-hint composer-note">Ctrl+Enter (or Cmd+Enter) saves.</p>
+      <ul v-if="validation.length > 0" class="error-list" aria-label="What to fix">
         <li v-for="e in validation" :key="e" class="field-error">{{ e }}</li>
       </ul>
     </form>
@@ -64,7 +75,7 @@
 </template>
 
 <script setup lang="ts">
-import { isQuarterTime, parseTags, validateEntryInput } from '~/composables/quarters'
+import { isQuarterTime, parseTags, previousQuarterSlot, validateEntryInput } from '~/composables/quarters'
 import type { Entry } from '~/composables/useEntries'
 
 const props = defineProps<{
@@ -72,6 +83,10 @@ const props = defineProps<{
   quarter: string
   quarters: string[]
   entries: Entry[]
+  /** Current quarter in the settings zone; null when viewing another day. */
+  currentQuarter?: string | null
+  /** True when the viewed day is today in the settings zone. */
+  isToday?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -79,7 +94,7 @@ const emit = defineEmits<{
   quarterChange: [quarter: string]
 }>()
 
-const { loadDraft, saveDraft, clearDraft } = useDrafts()
+const { loadDraft, saveDraft, clearDraft, hasDraft } = useDrafts()
 const { pending, saveErrors } = useEntries()
 
 const quarter = ref(props.quarter)
@@ -87,45 +102,68 @@ const text = ref('')
 const tagsRaw = ref('')
 const validation = ref<string[]>([])
 const textArea = ref<HTMLTextAreaElement | null>(null)
+// While restoring we must not persist: the watcher below only writes
+// user-originated edits, so switching slots never bleeds text across keys.
+let restoring = false
+const dirty = ref(false)
 
 const loggedQuarters = computed(() => new Set(props.entries.map((e) => e.time)))
 const editingExisting = computed(() => loggedQuarters.value.has(quarter.value))
 const saving = computed(() => !!pending.value[`${props.date} ${quarter.value}`])
 const saveError = computed(() => saveErrors.value[`${props.date} ${quarter.value}`] ?? null)
-
-const previousEntry = computed<Entry | null>(() => {
-  const earlier = props.entries.filter((e) => e.time < quarter.value)
-  return earlier.length > 0 ? earlier[earlier.length - 1] : null
-})
-const previousText = computed(() => previousEntry.value?.text ?? '')
-const parsedTags = computed(() => parseTags(tagsRaw.value))
-const canSave = computed(() => text.value.trim().length > 0 && isQuarterTime(quarter.value))
+const stepIndex = computed(() => props.quarters.indexOf(quarter.value))
 
 function savedEntryFor(q: string): Entry | undefined {
   return props.entries.find((e) => e.time === q)
 }
 
+/**
+ * The slot to continue from: exactly the preceding quarter (rolling over
+ * midnight), falling back to the latest earlier entry on this day.
+ */
+const continueExact = computed<Entry | null>(() => {
+  const prev = previousQuarterSlot(props.date, quarter.value)
+  if (prev.date !== props.date) return null // previous day is out of view
+  return savedEntryFor(prev.time) ?? null
+})
+const continueFallback = computed<Entry | null>(() => {
+  if (continueExact.value) return null
+  const earlier = props.entries.filter((e) => e.time < quarter.value)
+  return earlier.length > 0 ? earlier[earlier.length - 1] : null
+})
+const continueTarget = computed(() => continueExact.value ?? continueFallback.value)
+const parsedTags = computed(() => parseTags(tagsRaw.value))
+const canSave = computed(() => text.value.trim().length > 0 && isQuarterTime(quarter.value))
+
 function restore(): void {
-  const existing = savedEntryFor(quarter.value)
-  if (existing) {
-    // A saved entry is the source of truth; a leftover draft only matters
-    // when the last save failed and the entry is absent — then loadDraft below.
-    text.value = existing.text
-    tagsRaw.value = existing.tags.join(', ')
-    return
+  restoring = true
+  try {
+    // A stored draft always wins — even a deliberately emptied one. Only a
+    // slot never touched falls back to the saved entry.
+    const draft = loadDraft(props.date, quarter.value)
+    if (draft !== null) {
+      text.value = draft.text
+      tagsRaw.value = draft.tags
+    } else {
+      const existing = savedEntryFor(quarter.value)
+      text.value = existing ? existing.text : ''
+      tagsRaw.value = existing ? existing.tags.join(', ') : ''
+    }
+    dirty.value = false
+  } finally {
+    restoring = false
   }
-  const draft = loadDraft(props.date, quarter.value)
-  text.value = draft.text
-  tagsRaw.value = draft.tags
 }
 
 function persistDraft(): void {
+  if (restoring) return
+  dirty.value = true
   saveDraft(props.date, quarter.value, text.value, tagsRaw.value)
 }
 
-/** Prefill from the previous entry on this page (continue previous). */
+/** Prefill from the exact previous quarter, or the last earlier entry. */
 function continuePrevious(): void {
-  const prev = previousEntry.value
+  const prev = continueTarget.value
   if (!prev) return
   text.value = prev.text
   tagsRaw.value = prev.tags.join(', ')
@@ -133,27 +171,43 @@ function continuePrevious(): void {
   nextTick(() => textArea.value?.focus())
 }
 
-watch(
-  () => props.quarter,
-  (q) => {
-    if (q && q !== quarter.value) {
-      quarter.value = q
-      restore()
-      nextTick(() => textArea.value?.focus())
-    }
-  },
-)
+function stepQuarter(dir: -1 | 1): void {
+  const i = props.quarters.indexOf(quarter.value)
+  const next = props.quarters[i + dir]
+  if (next) {
+    quarter.value = next
+    restore()
+    nextTick(() => textArea.value?.focus())
+  }
+}
+
+function jumpNow(): void {
+  if (props.currentQuarter && props.quarters.includes(props.currentQuarter)) {
+    quarter.value = props.currentQuarter
+    restore()
+    nextTick(() => textArea.value?.focus())
+  }
+}
+
+watch(() => props.quarter, (q) => {
+  if (q && q !== quarter.value) {
+    quarter.value = q
+    restore()
+  }
+})
 watch(() => props.date, restore)
-// Entries arriving late (range fetch) refresh the form when it is pristine;
-// a form with user text is never overwritten from under the user.
+// Entries arriving late (range fetch) fill a pristine form only: a form with
+// user text — or a stored draft, even an emptied one — is never overwritten.
 watch(
   () => props.entries,
   () => {
-    if (!text.value && !tagsRaw.value) restore()
+    if (hasDraft(props.date, quarter.value)) return
+    if (text.value || tagsRaw.value || dirty.value) return
+    restore()
   },
   { deep: true },
 )
-watch([text, tagsRaw, quarter], persistDraft)
+watch([text, tagsRaw], persistDraft)
 watch(quarter, (q) => emit('quarterChange', q))
 
 function onSave(): void {
@@ -171,11 +225,29 @@ function onSave(): void {
 
 /** The page calls this after the server confirms the save. */
 function noteSaved(): void {
-  clearDraft(props.date, quarter.value)
-  validation.value = []
+  noteSavedFor(props.date, quarter.value)
 }
 
-defineExpose({ noteSaved, restore, focus: () => textArea.value?.focus() })
+/**
+ * Clear the draft for the saved slot — which may no longer be the selected
+ * one if the user moved on while the request flew.
+ */
+function noteSavedFor(date: string, time: string): void {
+  clearDraft(date, time)
+  if (date === props.date && time === quarter.value) {
+    dirty.value = false
+    validation.value = []
+  }
+}
+
+/** Pristine while the user has not typed and no draft waits for this slot. */
+function isPristine(): boolean {
+  if (dirty.value) return false
+  if (text.value || tagsRaw.value) return false
+  return !hasDraft(props.date, quarter.value)
+}
+
+defineExpose({ noteSaved, noteSavedFor, restore, isPristine, focus: () => textArea.value?.focus() })
 
 onMounted(restore)
 </script>

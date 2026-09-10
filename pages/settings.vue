@@ -1,16 +1,16 @@
 <template>
   <div>
     <MonoLabel dash>Preferences</MonoLabel>
-    <h1 class="mt-1 text-2xl leading-tight">How the journal keeps time</h1>
+    <h1 class="page-title">How the journal keeps time</h1>
 
-    <p v-if="loadError" role="alert" class="field-error mt-3">
-      Preferences would not load ({{ loadError }}). The form shows contract defaults;
+    <p v-if="loadError" role="alert" class="field-error notice">
+      Preferences couldn't load ({{ loadError }}). The form shows the usual setup;
       saving still tries the server.
     </p>
-    <p v-else-if="loading && !ready" class="mt-4 italic text-mute">Loading preferences…</p>
+    <p v-else-if="loading && !ready" class="muted-italic journal-gap">Loading preferences…</p>
     <PreferencesForm v-if="ready" :key="formKey" :initial="formInitial" @saved="onSaved" />
 
-    <HairlineRule class="mt-8" />
+    <HairlineRule class="export-gap" />
     <ExportPanel :today="today" />
   </div>
 </template>
@@ -41,7 +41,7 @@ onMounted(async () => {
     await fetchSettings()
     today.value = dayInZone(effective.value.timezone)
   } catch {
-    /* banner above names the failure; defaults stand */
+    /* the banner above names the failure; the usual setup stands */
   }
 })
 </script>

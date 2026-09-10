@@ -3,23 +3,24 @@
  * keystroke, restored when the composer opens, and cleared only after the
  * server confirms the save — a failed request or a navigation never loses
  * a line.
+ *
+ * Presence is the signal: a stored draft always wins over the server entry,
+ * even when the draft holds deliberately cleared (empty) text. Absence
+ * (null) means "never touched", which is the only case where the saved
+ * entry shows.
  */
 import { draftKey } from './quarters'
 
-function read(key: string): string {
-  try {
-    return localStorage.getItem(key) ?? ''
-  } catch {
-    return ''
-  }
+export interface Draft {
+  text: string
+  tags: string
 }
 
-function write(key: string, value: string): void {
+function rawRead(key: string): string | null {
   try {
-    if (value) localStorage.setItem(key, value)
-    else localStorage.removeItem(key)
+    return localStorage.getItem(key)
   } catch {
-    /* private mode: the composer still holds the text in memory */
+    return null
   }
 }
 
@@ -30,8 +31,10 @@ export function useDrafts() {
     userId.value = id || 'anon'
   }
 
-  function loadDraft(date: string, time: string): { text: string; tags: string } {
-    const raw = read(draftKey(userId.value, date, time))
+  /** Null when the slot was never touched; empty strings are a real draft. */
+  function loadDraft(date: string, time: string): Draft | null {
+    const raw = rawRead(draftKey(userId.value, date, time))
+    if (raw === null) return null
     if (!raw) return { text: '', tags: '' }
     try {
       const parsed = JSON.parse(raw) as { text?: string; tags?: string }
@@ -42,11 +45,11 @@ export function useDrafts() {
   }
 
   function saveDraft(date: string, time: string, text: string, tags: string): void {
-    if (!text && !tags) {
-      clearDraft(date, time)
-      return
+    try {
+      localStorage.setItem(draftKey(userId.value, date, time), JSON.stringify({ text, tags }))
+    } catch {
+      /* private mode: the composer still holds the text in memory */
     }
-    write(draftKey(userId.value, date, time), JSON.stringify({ text, tags }))
   }
 
   function clearDraft(date: string, time: string): void {
@@ -58,7 +61,7 @@ export function useDrafts() {
   }
 
   function hasDraft(date: string, time: string): boolean {
-    return read(draftKey(userId.value, date, time)) !== ''
+    return rawRead(draftKey(userId.value, date, time)) !== null
   }
 
   return { setUserId, loadDraft, saveDraft, clearDraft, hasDraft }

@@ -1,13 +1,15 @@
 /**
- * Entry store against the foundation API (docs/web-rebuild.md):
+ * Entry store against the API (docs/web-rebuild.md):
  * GET /api/entries?from&to -> {entries}; PUT /api/entries (idempotent
  * upsert) -> {entry}; DELETE /api/entries/:id -> {ok:true}.
  *
- * Race safety: every range fetch carries a sequence number and only the
- * latest response writes state; every upsert is keyed per quarter with its
- * own sequence so a slow save cannot overwrite a newer one. Pending and
- * error state are visible per quarter — nothing fails silently, and drafts
- * stay in localStorage until a save succeeds (see useDrafts).
+ * Race safety: the range sequence and the per-quarter save sequences live in
+ * shared state, so two store instances (two routes, a remount) still agree
+ * on which response is newest. Range fetches merge into the map instead of
+ * replacing it, and a response never overwrites a quarter that was written
+ * while it was in flight. Pending and error state are visible per quarter —
+ * nothing fails silently, and drafts stay in localStorage until a save
+ * succeeds (see useDrafts).
  */
 
 export interface Entry {
@@ -31,6 +33,11 @@ export function entryKey(date: string, time: string): string {
   return `${date} ${time}`
 }
 
+/** True when the day string falls inside an inclusive range. */
+function inRange(day: string, from: string, to: string): boolean {
+  return day >= from && day <= to
+}
+
 export function useEntries() {
   const byKey = useState<Record<string, Entry>>('fifteen_entries', () => ({}))
   const rangeFrom = useState<string | null>('fifteen_range_from', () => null)
@@ -41,8 +48,12 @@ export function useEntries() {
   const saveErrors = useState<Record<string, string | null>>('fifteen_save_errors', () => ({}))
   const lastDeleted = useState<Entry | null>('fifteen_last_deleted', () => null)
 
-  let rangeSeq = 0
-  const saveSeq: Record<string, number> = {}
+  // Shared versions: every instance reads the same counters, so a stale
+  // response from an earlier route can never overwrite current data.
+  const rangeSeq = useState<number>('fifteen_range_seq', () => 0)
+  const saveSeqMap = useState<Record<string, number>>('fifteen_save_seq', () => ({}))
+  const writeSeq = useState<number>('fifteen_write_seq', () => 0)
+  const writtenAt = useState<Record<string, number>>('fifteen_written_at', () => ({}))
 
   const sorted = computed<Entry[]>(() =>
     Object.values(byKey.value).sort((a, b) =>
@@ -63,33 +74,46 @@ export function useEntries() {
   }
 
   async function fetchRange(from: string, to: string): Promise<Entry[]> {
-    const seq = ++rangeSeq
+    const seq = ++rangeSeq.value
+    const writesBefore = writeSeq.value
     loading.value = true
     rangeError.value = null
     try {
       const data = await $fetch<{ entries: Entry[] }>('/api/entries', {
         params: { from, to },
       })
-      if (seq !== rangeSeq) return [] // stale: a newer range won
-      const next: Record<string, Entry> = {}
-      for (const e of data.entries ?? []) next[entryKey(e.date, e.time)] = e
+      if (seq !== rangeSeq.value) return [] // stale: a newer range won
+      const next = { ...byKey.value }
+      for (const k of Object.keys(next)) {
+        if (inRange(k.slice(0, 10), from, to)) delete next[k]
+      }
+      const pendingNow = pending.value
+      for (const e of data.entries ?? []) {
+        const key = entryKey(e.date, e.time)
+        if (!inRange(e.date, from, to)) continue
+        // A quarter written or saving while this fetch flew is newer than
+        // the response — the response must not clobber it.
+        if ((writtenAt.value[key] ?? 0) > writesBefore) continue
+        if (pendingNow[key]) continue
+        next[key] = e
+      }
       byKey.value = next
       rangeFrom.value = from
       rangeTo.value = to
-      return Object.values(next)
+      return Object.values(next).filter((e) => inRange(e.date, from, to))
     } catch (err) {
-      if (seq !== rangeSeq) return []
+      if (seq !== rangeSeq.value) return []
       rangeError.value = err instanceof Error ? err.message : 'Could not load entries.'
       throw err
     } finally {
-      if (seq === rangeSeq) loading.value = false
+      if (seq === rangeSeq.value) loading.value = false
     }
   }
 
   async function saveEntry(input: EntryInput): Promise<Entry> {
     const key = entryKey(input.date, input.time)
-    const seq = (saveSeq[key] ?? 0) + 1
-    saveSeq[key] = seq
+    const seq = (saveSeqMap.value[key] ?? 0) + 1
+    saveSeqMap.value = { ...saveSeqMap.value, [key]: seq }
     pending.value = { ...pending.value, [key]: true }
     saveErrors.value = { ...saveErrors.value, [key]: null }
     try {
@@ -97,11 +121,13 @@ export function useEntries() {
         method: 'PUT',
         body: { date: input.date, time: input.time, text: input.text.trim(), tags: input.tags },
       })
-      if (seq !== saveSeq[key]) return data.entry // superseded: keep newer state
+      if (seq !== saveSeqMap.value[key]) return data.entry // superseded: keep newer state
       byKey.value = { ...byKey.value, [key]: data.entry }
+      writeSeq.value += 1
+      writtenAt.value = { ...writtenAt.value, [key]: writeSeq.value }
       return data.entry
     } catch (err) {
-      if (seq === saveSeq[key]) {
+      if (seq === saveSeqMap.value[key]) {
         saveErrors.value = {
           ...saveErrors.value,
           [key]: err instanceof Error ? err.message : 'Could not save this quarter.',
@@ -109,7 +135,7 @@ export function useEntries() {
       }
       throw err
     } finally {
-      if (seq === saveSeq[key]) {
+      if (seq === saveSeqMap.value[key]) {
         const { [key]: _drop, ...rest } = pending.value
         pending.value = rest
       }
@@ -121,21 +147,28 @@ export function useEntries() {
     pending.value = { ...pending.value, [key]: true }
     try {
       await $fetch<{ ok: true }>(`/api/entries/${entry.id}`, { method: 'DELETE' })
-      lastDeleted.value = entry
       const { [key]: _drop, ...rest } = byKey.value
       byKey.value = rest
+      writeSeq.value += 1
+      writtenAt.value = { ...writtenAt.value, [key]: writeSeq.value }
+      lastDeleted.value = entry
     } finally {
       const { [key]: _p, ...rest } = pending.value
       pending.value = rest
     }
   }
 
-  /** Undo a delete by re-upserting the snapshot (same date+time idempotency). */
+  /**
+   * Undo a delete by re-upserting the snapshot (same date+time idempotency).
+   * The snapshot clears only after the server confirms, so a failed undo
+   * keeps it around for a retry.
+   */
   async function undoDelete(): Promise<Entry | null> {
     const snap = lastDeleted.value
     if (!snap) return null
-    lastDeleted.value = null
-    return saveEntry({ date: snap.date, time: snap.time, text: snap.text, tags: snap.tags })
+    const restored = await saveEntry({ date: snap.date, time: snap.time, text: snap.text, tags: snap.tags })
+    if (lastDeleted.value === snap) lastDeleted.value = null
+    return restored
   }
 
   return {

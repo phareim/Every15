@@ -1,9 +1,6 @@
 <template>
-  <span
-    class="font-mono uppercase text-mute"
-    :class="accent ? 'text-accent-ink' : ''"
-    style="font-size: 10px; letter-spacing: 0.16em;"
-  ><template v-if="dash">&mdash;&nbsp;</template><slot /></span>
+  <span class="mono-label" :class="accent ? 'mono-label--accent' : ''"
+    ><template v-if="dash">&mdash;&nbsp;</template><slot /></span>
 </template>
 
 <script setup lang="ts">

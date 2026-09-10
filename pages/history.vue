@@ -1,34 +1,34 @@
 <template>
   <div>
     <MonoLabel dash>History</MonoLabel>
-    <h1 class="mt-1 text-2xl leading-tight">Past days</h1>
+    <h1 class="page-title">Past days</h1>
 
-    <form class="mt-3 flex flex-wrap items-end gap-3" @submit.prevent="jump">
-      <div>
-        <label class="tnum block text-xs text-mute" for="history-pick">Open a day</label>
+    <form class="history-pick" @submit.prevent="jump">
+      <div class="field-inline">
+        <label class="field-label tnum" for="history-pick">Open a day</label>
         <input id="history-pick" v-model="pick" type="date" class="tufte-input tnum" :max="today" />
       </div>
       <ActionLabel @click="jump">Open</ActionLabel>
     </form>
 
-    <p v-if="rangeError" role="alert" class="field-error mt-3">
-      History would not load ({{ rangeError }}).
-      <button type="button" class="underline" @click="reload">Try again</button>
+    <p v-if="rangeError" role="alert" class="field-error notice">
+      Couldn't load those days ({{ rangeError }}).
+      <button type="button" class="link" @click="reload">Try again</button>
     </p>
-    <p v-else-if="loading && rows.length === 0" class="mt-6 italic text-mute">Loading the fortnight…</p>
-    <ul v-else class="mt-4 border-t border-rule" role="list">
+    <p v-else-if="loading && rows.length === 0" class="muted-italic journal-gap">Loading the fortnight…</p>
+    <ul v-else class="history-list" role="list">
       <li v-for="row in rows" :key="row.day" class="entry-row">
-        <NuxtLink :to="`/?date=${row.day}`" class="flex items-baseline gap-3 no-underline">
-          <span class="tnum shrink-0 text-sm">{{ row.day.slice(5) }}</span>
-          <span class="flex-1">
-            <span class="block leading-snug">{{ shortDayLabel(row.day) }}</span>
-            <span v-if="row.first" class="block truncate text-sm italic text-mute">“{{ row.first }}”</span>
+        <NuxtLink :to="`/?date=${row.day}`" class="history-link">
+          <span class="tnum history-date">{{ row.day.slice(5) }}</span>
+          <span class="history-main">
+            <span class="history-day">{{ shortDayLabel(row.day) }}</span>
+            <span v-if="row.first" class="history-first">“{{ row.first }}”</span>
           </span>
-          <span class="tnum shrink-0 text-sm text-mute">{{ row.count }} &middot; {{ fmtDuration(row.count) }}</span>
+          <span class="tnum history-count">{{ row.count }} &middot; {{ fmtDuration(row.count) }}</span>
         </NuxtLink>
       </li>
     </ul>
-    <p v-if="!loading && rows.length === 0" class="mt-6 italic text-mute">
+    <p v-if="!loading && rows.length === 0" class="muted-italic journal-gap">
       No entries in the last fourteen days. A calm, empty fortnight.
     </p>
   </div>
@@ -67,7 +67,7 @@ async function reload(): Promise<void> {
   try {
     await fetchRange(addDays(to, -13), to)
   } catch {
-    showError('History still would not load.')
+    showError('Still not loading.')
   }
 }
 
@@ -76,7 +76,7 @@ onMounted(async () => {
     await fetchSettings()
     today.value = dayInZone(effective.value.timezone)
   } catch {
-    /* contract default stands */
+    /* the daytime fallback stands */
   }
   pick.value = today.value
   await reload()

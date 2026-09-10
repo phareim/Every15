@@ -12,16 +12,10 @@ select:focus-visible {
 }
 
 /* Semantic color shims. The UI reads the Tufte tokens directly so it stays
-   correct whether or not the framework ships the Do tailwind preset. */
+   correct whether or not the framework ships a utility preset. */
 .text-mute { color: var(--text-muted); }
 .text-faint { color: var(--tufte-muted); }
-.text-ink { color: var(--tufte-ink); }
 .text-accent-ink { color: var(--text-accent); }
-.border-rule { border-color: var(--border-rule); }
-.border-rule-strong { border-color: var(--border-strong); }
-.border-accent { border-color: var(--border-accent); }
-.hover\:text-ink:hover { color: var(--tufte-ink); }
-.hover\:border-rule-strong:hover { border-color: var(--border-strong); }
 
 /* Times and counts align in columns. */
 .tnum {
@@ -59,6 +53,20 @@ select.tufte-input {
    day is empty, so an empty journal is still a sheet, not a scrap. */
 .page-sheet {
   min-height: calc(100dvh - 12rem);
+  padding: 1.25rem;
+}
+@media (min-width: 640px) {
+  .page-sheet {
+    padding: 1.5rem 1.75rem;
+  }
+}
+
+/* Hairline base: pressed under the tactile layer, a plain rule without it. */
+.hairline {
+  height: 1px;
+  border: 0;
+  margin: 0;
+  background: var(--border-rule);
 }
 
 .tufte-tactile .hairline {
@@ -195,6 +203,445 @@ select.tufte-input {
     grid-column: 1 / -1;
     order: 3;
   }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Fifteen · semantic layout (no utility framework)
+   Every class below is named for what it is, not how far it sits. Nothing
+   in components/ or pages/ depends on Tailwind or any other preset.
+   ───────────────────────────────────────────────────────────────────────── */
+
+/* App shell: one centered column on the desk. */
+.shell {
+  margin-inline: auto;
+  width: 100%;
+  max-width: 42rem;
+  padding: 1.5rem 1rem 6rem;
+}
+@media (min-width: 640px) {
+  .shell {
+    padding: 2rem 1.25rem 6rem;
+  }
+}
+.sheet-gap { margin-top: 1.25rem; }
+
+.masthead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+.masthead-title {
+  margin-top: 0.25rem;
+  font-size: 1.5rem;
+  line-height: 1.2;
+}
+.auth-zone {
+  flex-shrink: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+.signin-link { font-size: 12px; }
+.nav-gap {
+  margin-top: 0.75rem;
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: 1.25rem;
+  row-gap: 0.5rem;
+}
+.nav-rule { margin-top: 1rem; }
+.site-footer {
+  margin-top: 1rem;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem 0.75rem;
+  flex-wrap: wrap;
+}
+.user-email {
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+
+/* Shared prose helpers. */
+.page-title {
+  margin-top: 0.25rem;
+  font-size: 1.5rem;
+  line-height: 1.2;
+}
+.notice { margin-top: 0.75rem; }
+.link { text-decoration: underline; }
+.auth-prompt { margin-top: 1rem; }
+.muted-italic {
+  color: var(--text-muted);
+  font-style: italic;
+}
+.spacer { flex: 1; }
+.row-between {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+.rule-gap { margin-top: 0.5rem; }
+
+/* Section labels: small mono caps, the Almanac convention. */
+.mono-label {
+  font-family: 'SF Mono', ui-monospace, Menlo, Consolas, monospace;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  font-size: 10px;
+  letter-spacing: 0.16em;
+}
+.mono-label--accent { color: var(--text-accent); }
+
+/* Bordered chip button: a paper button pressed into whatever it sits on. */
+.action-label {
+  font-family: 'SF Mono', ui-monospace, Menlo, Consolas, monospace;
+  text-transform: uppercase;
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  border: 1px solid var(--border-rule);
+  border-radius: 0;
+  color: var(--text-muted);
+  padding: 0.375rem 0.75rem;
+  cursor: pointer;
+  user-select: none;
+  background: transparent;
+  transition: color 150ms, border-color 150ms;
+}
+.action-label:hover:not(:disabled) {
+  color: var(--tufte-ink);
+  border-color: var(--border-strong);
+}
+.action-label:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.action-label--accent {
+  border-color: var(--border-accent);
+  color: var(--text-accent);
+}
+.action-label__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.action-label__text { display: none; }
+@media (min-width: 640px) {
+  .action-label__icon { display: none; }
+  .action-label__text { display: inline; }
+}
+
+/* Forms: labels, inline fields, action rows. */
+.field-label {
+  display: block;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.field-inline { min-width: 0; }
+.field-block { margin-top: 1rem; }
+.mt-field { margin-top: 0.75rem; }
+.error-list {
+  margin-top: 0.5rem;
+  padding: 0;
+  list-style: none;
+}
+.count-note {
+  font-size: 12px;
+  color: var(--text-faint);
+}
+
+/* Day navigation. */
+.day-nav {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+}
+.day-pick { max-width: 11em; }
+.day-title {
+  margin-top: 0.75rem;
+  font-size: 1.5rem;
+  line-height: 1.2;
+}
+.day-count {
+  margin-top: 0.25rem;
+  font-size: 0.875rem;
+  color: var(--text-muted);
+}
+
+/* Entry composer. */
+.composer { margin-top: 1.25rem; }
+.composer-form { margin-top: 0.5rem; }
+.composer-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.75rem 1rem;
+}
+.composer-steps {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+}
+.composer-note { margin-top: 0.5rem; }
+.composer-actions {
+  margin-top: 0.5rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1rem;
+}
+
+/* Inline reminder strip on the day page. */
+.reminder-strip {
+  margin-top: 1rem;
+  border: 1px solid var(--border-rule);
+  background: var(--surface-sunk);
+  padding: 0.75rem 1rem;
+}
+.reminder-lead { line-height: 1.45; }
+.reminder-row {
+  margin-top: 0.5rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1rem;
+}
+.reminder-note { font-size: 12px; }
+
+/* Journal: generous serif rows with room to breathe. */
+.journal { margin-top: 1.5rem; }
+.journal-gap { margin-top: 1.5rem; }
+.journal-empty {
+  font-size: 1.125rem;
+  line-height: 1.4;
+}
+.journal-hint { margin-top: 0.25rem; }
+.entry-top {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+}
+.entry-time {
+  flex-shrink: 0;
+  font-size: 0.875rem;
+}
+.entry-text {
+  flex: 1;
+  min-width: 0;
+  font-size: 1.0625rem;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+.entry-tools {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+.tool-link {
+  font-size: 12px;
+  color: var(--text-muted);
+  text-decoration: underline;
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+}
+.tool-link:hover:not(:disabled) { color: var(--tufte-ink); }
+.tool-link:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.tool-danger { color: var(--text-accent); }
+.confirm-group {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.confirm-q {
+  font-size: 12px;
+  font-style: italic;
+  color: var(--text-muted);
+}
+.entry-tags {
+  margin-top: 0.25rem;
+  padding-left: 3.5rem;
+  font-size: 12px;
+  color: var(--text-faint);
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+.chip-block { margin-top: 1.25rem; }
+.chip-row {
+  margin-top: 0.5rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.chip-tight { margin-top: 0.25rem; }
+.quarter-chip--on {
+  border-color: var(--tufte-accent);
+  color: var(--text-accent);
+}
+
+/* Toast: one paper card above the desk, centered. */
+.toast-card {
+  position: fixed;
+  bottom: 1rem;
+  left: 50%;
+  z-index: 50;
+  width: calc(100% - 2rem);
+  max-width: 28rem;
+  transform: translateX(-50%);
+  padding: 0.75rem 1rem;
+}
+.toast-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+.toast-msg {
+  font-size: 0.875rem;
+  font-style: italic;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.toast-msg--error {
+  font-style: normal;
+  color: var(--text-accent);
+}
+.toast-tools {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+/* History rows. */
+.history-pick {
+  margin-top: 0.75rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.75rem;
+}
+.history-list {
+  margin-top: 1rem;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--border-rule);
+}
+.history-link {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+  text-decoration: none;
+  color: inherit;
+}
+.history-date {
+  flex-shrink: 0;
+  font-size: 0.875rem;
+}
+.history-main {
+  flex: 1;
+  min-width: 0;
+}
+.history-day {
+  display: block;
+  line-height: 1.45;
+}
+.history-first {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+  font-size: 0.875rem;
+  font-style: italic;
+  color: var(--text-muted);
+}
+.history-count {
+  flex-shrink: 0;
+  font-size: 0.875rem;
+  color: var(--text-muted);
+}
+
+/* Week review. */
+.week-count {
+  margin-top: 0.25rem;
+  font-size: 0.875rem;
+  color: var(--text-muted);
+}
+.week-nav {
+  margin-top: 0.75rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+}
+.week-days { margin-top: 1.25rem; }
+.week-tags { margin-top: 1.5rem; }
+.week-day {
+  flex-shrink: 0;
+  width: 6rem;
+  font-size: 0.875rem;
+}
+.week-bar { flex: 1; }
+.week-caption {
+  flex-shrink: 0;
+  width: 7rem;
+  text-align: right;
+  font-size: 0.875rem;
+  color: var(--text-muted);
+}
+.bar-gap {
+  margin-top: 0.5rem;
+  padding: 0;
+  list-style: none;
+}
+.bar-empty { margin-top: 1rem; }
+.bar-note { margin-top: 0.5rem; }
+.bar-label {
+  font-size: 0.875rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.bar-value { font-size: 0.875rem; }
+
+/* Preferences + export. */
+.prefs-form { margin-top: 0.25rem; }
+.prefs-row {
+  margin-top: 1rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.5rem;
+}
+.prefs-check {
+  margin-top: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+.prefs-check-label { font-size: 0.875rem; }
+.export-block { margin-top: 2rem; }
+.export-gap { margin-top: 2rem; }
+.export-form {
+  margin-top: 0.5rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.75rem 1rem;
 }
 
 @media (prefers-reduced-motion: reduce) {
