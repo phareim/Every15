@@ -77,6 +77,14 @@
       <label for="pref-reminders" class="prefs-check-label">Remind me when quarters go unlogged</label>
     </div>
 
+    <div v-if="form.remindersEnabled" class="notice">
+      <button v-if="permission === 'default'" type="button" class="link" @click="enable">Enable browser notifications</button>
+      <p v-else-if="permission === 'granted'" class="form-hint">Browser notifications are on.</p>
+      <p v-else-if="permission === 'denied'" class="form-hint">Notifications are blocked. Allow them in this site's browser settings.</p>
+      <p v-else class="form-hint">This browser supports in-page reminders only.</p>
+      <p class="form-hint">Keep this app open for reminders. Sleeping or suspended tabs may delay them.</p>
+    </div>
+
     <div class="composer-actions">
       <ActionLabel accent :disabled="saving || !dirty" @click="onSave">
         {{ saving ? 'Saving' : 'Save preferences' }}
@@ -95,6 +103,8 @@ import type { Settings } from '~/composables/useSettings'
 const props = defineProps<{ initial: Settings }>()
 
 const { saving, saveError, savedAt, saveSettings } = useSettings()
+const { permission, refresh, enable } = useBrowserNotify()
+onMounted(refresh)
 const emit = defineEmits<{ saved: [settings: Settings] }>()
 
 const form = ref<Settings>({ ...props.initial, workDays: [...props.initial.workDays] })

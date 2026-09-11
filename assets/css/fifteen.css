@@ -1,3 +1,5 @@
+*, *::before, *::after { box-sizing: border-box; }
+body { margin: 0; }
 /* Fifteen — app layer on top of the vendored Tufte base (assets/css/tufte.css).
    Warm tactile paper sheet on a muted desk, quiet rules, one crimson action.
    English UI, no emoji. Numbers tabular, prose ET Book serif. */
@@ -651,4 +653,15 @@ select.tufte-input {
     transition: none !important;
     animation: none !important;
   }
+}
+
+/* Comfortable controls on touch screens; the paper keeps its quiet scale. */
+.action-label { min-height: 36px; }
+textarea#composer-text { font-size: 20px; line-height: 1.45; padding: 12px; }
+.desk-nav a.router-link-active { color: var(--text-strong); border-bottom-color: currentColor; }
+.entry-text { white-space: pre-wrap; }
+@media (max-width: 560px) {
+  .shell { padding: 20px 12px 40px; }
+  .page-sheet { padding: 20px 16px; }
+  .day-nav { gap: 8px; }
 }

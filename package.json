@@ -8,7 +8,7 @@
     "build": "nuxt build",
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare",
-    "test": "jest"
+    "test": "jest --runInBand && node tests/quarter-checks.mjs"
   },
   "repository": {
     "type": "git",

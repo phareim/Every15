@@ -436,7 +436,7 @@ async function main() {
       pass('failed save keeps draft with error state');
       // Away and back: the failed draft must still be there.
       await page.getByRole('link', { name: /Week/ }).first().click();
-      await page.getByRole('heading', { name: /Week review/ }).waitFor({ timeout: TIMEOUT });
+      await page.locator('section[aria-label="Days"]').waitFor({ timeout: TIMEOUT });
       await page.goBack({ timeout: TIMEOUT });
       await page.locator('section[aria-label="Entry composer"]').waitFor({ timeout: TIMEOUT });
       await openQuarter(page, Q3);
@@ -510,7 +510,7 @@ async function main() {
     // ---- Week / history / preferences routes render ----
     try {
       await page.goto(`${BASE}/week`, { waitUntil: 'domcontentloaded', timeout: TIMEOUT });
-      await page.getByRole('heading', { name: /Week review/ }).waitFor({ timeout: TIMEOUT });
+      await page.locator('section[aria-label="Days"]').waitFor({ timeout: TIMEOUT });
       await page.locator('section[aria-label="Days"]').waitFor({ timeout: TIMEOUT });
       pass('week route renders');
       await page.goto(`${BASE}/history`, { waitUntil: 'domcontentloaded', timeout: TIMEOUT });

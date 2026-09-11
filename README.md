@@ -33,13 +33,15 @@ select the timezone used for the current day and reminders.
 npm ci
 npm test
 npm run build
+bash scripts/test-worker.sh
 ```
 
-See [the work packages and API contract](docs/web-rebuild.md).
+See [the work packages and API contract](docs/web-rebuild.md) and
+[verification instructions](docs/testing.md).
 
 ## Deployment
 
-Push to `main` runs `.github/workflows/deploy.yml`: tests, build, D1 migrations,
+Push to `main` runs `.github/workflows/deploy.yml`: tests, build, local API checks, D1 migrations,
 then Worker deployment. Repository secrets: `CLOUDFLARE_API_TOKEN` (Worker and D1
 permissions) and `CLOUDFLARE_ACCOUNT_ID`. The custom domain is declared in
 `wrangler.toml`; Cloudflare manages its route and certificate.

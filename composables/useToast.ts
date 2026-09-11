@@ -9,7 +9,7 @@ export interface Toast {
 
 export function useToast() {
   const toast = useState<Toast | null>('fifteen_toast', () => null)
-  let nextId = 1
+  const nextId = useState<number>('fifteen_toast_seq', () => 0)
   let timer: ReturnType<typeof setTimeout> | null = null
 
   function dismiss(): void {
@@ -25,10 +25,11 @@ export function useToast() {
       clearTimeout(timer)
       timer = null
     }
-    toast.value = { id: nextId++, message, kind, actionLabel }
+    const id = ++nextId.value
+    toast.value = { id, message, kind, actionLabel }
     if (kind === 'note') {
       timer = setTimeout(() => {
-        toast.value = null
+        if (toast.value?.id === id) toast.value = null
         timer = null
       }, 6000)
     }

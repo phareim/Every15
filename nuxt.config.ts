@@ -9,6 +9,11 @@ export default defineNuxtConfig({
   app: {
     head: {
       title: 'Every15',
+      htmlAttrs: { lang: 'en', class: 'tufte-tactile' },
+      link: [
+        { rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' },
+        { rel: 'manifest', href: '/manifest.webmanifest' },
+      ],
       meta: [
         { name: 'description', content: 'Write what you actually spent each quarter-hour doing' },
         { name: 'viewport', content: 'width=device-width, initial-scale=1, viewport-fit=cover' },

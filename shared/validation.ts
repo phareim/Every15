@@ -18,9 +18,12 @@ import {
 
 export class ApiError extends Error {
   statusCode: number
+  statusMessage: string
+  unhandled = false
   constructor(statusCode: number, message: string) {
     super(message)
     this.statusCode = statusCode
+    this.statusMessage = message.replace(/[^\x20-\x7E]/g, " ")
   }
 }
 

@@ -45,5 +45,4 @@ async function onUndo() {
   }
 }
 
-void showError
 </script>

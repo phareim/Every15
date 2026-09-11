@@ -1,7 +1,7 @@
 <template>
   <section aria-label="Entry composer" class="composer">
-    <MonoLabel dash accent>Now logging</MonoLabel>
-    <form class="composer-form" @submit.prevent="onSave" @keydown.ctrl.enter="onSave" @keydown.meta.enter="onSave">
+    <MonoLabel dash>{{ editingExisting ? 'Editing quarter' : 'Now logging' }}</MonoLabel>
+    <form class="composer-form" @submit.prevent="onSave" @keydown.ctrl.enter.prevent="onSave" @keydown.meta.enter.prevent="onSave">
       <div class="composer-top">
         <div class="field-inline">
           <label class="field-label tnum" for="composer-quarter">Quarter</label>
@@ -207,10 +207,11 @@ watch(
   },
   { deep: true },
 )
-watch([text, tagsRaw], persistDraft)
-watch(quarter, (q) => emit('quarterChange', q))
+watch([text, tagsRaw], persistDraft, { flush: 'sync' })
+watch(quarter, (q) => { restore(); emit('quarterChange', q) }, { flush: 'sync' })
 
 function onSave(): void {
+  if (saving.value) return
   const input = {
     date: props.date,
     time: quarter.value,

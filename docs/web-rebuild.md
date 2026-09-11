@@ -21,3 +21,17 @@ Replace the retired Swift client and old backend with a Nuxt 3 personal web app 
 
 ## Working rules
 Work in assigned isolated worktree. Read CLAUDE.md for historic context but this document supersedes old architecture. Do not deploy, push, or edit the other work package's files. Commit YOUR changes on your worktree branch when complete. Run meaningful checks explicitly (foundation npm test and npm run build if UI absent add no UI placeholder; UI syntax review and report integration needs). Report commit hash, file list, checks and limitations. Coordinator will merge and push. Do not delete original Every15/ or worker/; coordinator handles retirement.
+
+## Implementation record — 2026-09-11
+
+Muse implemented the foundation and interface in separate worktrees, then
+handled review fixes in each. A third Muse worktree delivered API and browser
+verification scripts. Six Muse jobs in total produced the implementation and
+verification commits. The coordinator integrated the packages, corrected
+browser-observed state/layout issues, added local D1 verification to CI, and
+reviewed the rendered desktop and mobile pages.
+
+Completed locally: 33 backend unit checks, 31 UI helper checks, 58 real D1/API
+checks (including concurrent upserts), and 25 browser checks. Native code and
+the obsolete backend were removed from the working tree; git preserves them
+at `185c512`. The historic R2 bucket was not changed.

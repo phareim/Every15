@@ -4,7 +4,7 @@
       <header>
         <div class="masthead">
           <div>
-            <MonoLabel dash>Fifteen</MonoLabel>
+            <MonoLabel dash>Every15</MonoLabel>
             <p class="masthead-title">What the quarter-hours held</p>
           </div>
           <span class="auth-zone">
@@ -65,38 +65,35 @@ const loginHref = computed(() => {
 // Timed nudges live at shell level, so they fire on any route while the app
 // is open. The watcher below only computes; permission was granted by an
 // explicit click, and each boundary fires once.
-const { effective } = useSettings()
-const { sorted } = useEntries()
-const { permission, fire } = useBrowserNotify()
+const { effective, fetchSettings } = useSettings()
+const { permission, refresh, alreadyFired, fire } = useBrowserNotify()
 const { today, nowTime, start, stop } = useNow(() => effective.value.timezone)
-const route = useRoute()
-
-const liveDay = computed(() => {
-  const q = route.query.date
-  return typeof q === 'string' && q ? q : today.value
+// Check today's entries before nudging, including when another date or route
+// is open. This read doesn't replace the journal's selected range.
+let checkingReminder = false
+watch([nowTime, today, permission, effective], async () => {
+  if (!user.value || permission.value !== 'granted' || checkingReminder) return
+  const target = reminderTarget(effective.value, today.value, today.value, nowTime.value, [])
+  if (!target || alreadyFired(user.value.id, today.value, target)) return
+  checkingReminder = true
+  const date = today.value
+  try {
+    const { entries } = await $fetch<{ entries: import('~/composables/useEntries').Entry[] }>('/api/entries', { params: { from: date, to: date } })
+    if (!entries.some(entry => entry.time === target)) {
+      const missing = backfillQuarters(effective.value, date, date, nowTime.value, entries.map(entry => entry.time)).length
+      fire(user.value.id, date, target, Math.max(missing, 1))
+    }
+  } catch {
+    // A failed read isn't evidence of unlogged time; retry at the next tick.
+  } finally {
+    checkingReminder = false
+  }
 })
 
-watch([nowTime, today, sorted, permission], () => {
-  if (permission.value !== 'granted') return
-  const target = reminderTarget(
-    effective.value,
-    liveDay.value,
-    today.value,
-    nowTime.value,
-    sorted.value,
-  )
-  if (!target) return
-  const logged = sorted.value.filter((e) => e.date === liveDay.value).map((e) => e.time)
-  const missing = backfillQuarters(
-    effective.value,
-    liveDay.value,
-    today.value,
-    nowTime.value,
-    logged,
-  ).length
-  fire(user.value?.id ?? 'anon', liveDay.value, target, Math.max(missing, 1))
+onMounted(async () => {
+  refresh()
+  start()
+  try { await fetchSettings() } catch { /* Pages show the loading error. */ }
 })
-
-onMounted(start)
 onUnmounted(stop)
 </script>

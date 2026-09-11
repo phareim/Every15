@@ -64,7 +64,7 @@ const auth = useAuth() as unknown as {
 }
 const { effective, fetchSettings, loadError } = useSettings()
 const { entriesForDay, fetchRange, saveEntry, deleteEntry, loading, rangeError, pending } = useEntries()
-const { setUserId, hasDraft } = useDrafts()
+const { setUserId, hasDraft, clearDraft } = useDrafts()
 const { show, showError } = useToast()
 
 const loginHref = computed(() => {
@@ -120,10 +120,7 @@ const reminder = computed(() =>
 )
 
 function defaultQuarter(): string {
-  if (isLiveDay.value) {
-    const current = floorQuarter(timeInZone(effective.value.timezone))
-    if (windowQuarters.value.includes(current) && !loggedTimes.value.includes(current)) return current
-  }
+  if (isLiveDay.value) return floorQuarter(timeInZone(effective.value.timezone))
   return backfill.value[0] ?? effective.value.startTime
 }
 
@@ -163,18 +160,17 @@ watch(
 
 // Midnight and the current quarter advance while the page stays open: follow
 // the live day when the composer is pristine, never while typing.
-watch(today, (t) => {
-  if (day.value !== t) {
+watch(today, (t, previousToday) => {
+  if (day.value === previousToday) {
     if (!composerPristine()) return
     day.value = t
     quarter.value = defaultQuarter()
     reload()
   }
 })
-watch(nowTime, () => {
+watch(currentQuarter, (cq, previousQuarter) => {
   if (!isLiveDay.value || !composerPristine()) return
-  const cq = floorQuarter(nowTime.value)
-  if (windowQuarters.value.includes(cq) && cq !== quarter.value) {
+  if (quarter.value === previousQuarter && cq !== quarter.value) {
     quarter.value = cq
   }
 })
@@ -199,6 +195,7 @@ async function onSave(input: { date: string; time: string; text: string; tags: s
   const slot = { date: input.date, time: input.time }
   try {
     await saveEntry(input)
+    clearDraft(slot.date, slot.time)
     try {
       composer.value?.noteSavedFor(slot.date, slot.time)
     } catch {

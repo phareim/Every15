@@ -24,6 +24,7 @@ Exit codes: 0 = pass (skips allowed), 1 = failure, 2 = refused/usage.
 """
 
 import argparse
+from concurrent.futures import ThreadPoolExecutor
 import csv
 import io
 import json
@@ -326,6 +327,25 @@ def main():
                 note_fail("no duplicate row for quarter",
                           "got HTTP %s with %s rows" % (st, len(dupes) if rows is not None else "?"))
 
+            # Exercise the real database uniqueness constraint under concurrent writes.
+            def concurrent_write(index):
+                return http(base, "PUT", "/api/entries", session=primary,
+                            body={"date": TEST_DATE, "time": "09:15", "text": "Parallel %d" % index})
+
+            with ThreadPoolExecutor(max_workers=8) as pool:
+                responses = list(pool.map(concurrent_write, range(8)))
+            parallel_ids = []
+            for status, _, payload in responses:
+                entry = (jload(payload) or {}).get("entry", {})
+                if status == 200 and entry.get("id"):
+                    parallel_ids.append(entry["id"])
+            created_primary.extend(set(parallel_ids))
+            if len(parallel_ids) == 8 and len(set(parallel_ids)) == 1:
+                note_pass("concurrent upserts all succeed with one stable id")
+            else:
+                mark(False)
+                note_fail("concurrent upserts", "expected 8 successes and one id")
+
             # Validation negatives (each must be rejected, none creates rows).
             bad_puts = [
                 ("reject empty text", {"date": TEST_DATE, "time": T_VALID, "text": ""}),
@@ -340,7 +360,10 @@ def main():
                  {"date": TEST_DATE, "time": T_VALID, "text": "x", "tags": ["y" * 41]}),
             ]
             for name, payload in bad_puts:
-                st, _, _ = http(base, "PUT", "/api/entries", body=payload, session=primary)
+                st, _, raw = http(base, "PUT", "/api/entries", body=payload, session=primary)
+                unexpected = (jload(raw) or {}).get("entry", {}).get("id")
+                if st == 200 and unexpected:
+                    created_primary.append(unexpected)
                 mark(expect(name, st, 400))
             st, _, _ = http(base, "GET",
                             "/api/entries?from=2000-01-01&to=2002-06-01",

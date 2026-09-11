@@ -3,6 +3,14 @@ name: Deploy to Cloudflare Workers
 on:
   push:
     branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: every15-production
+  cancel-in-progress: false
 
 jobs:
   deploy:
@@ -12,7 +20,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
 
       - run: npm ci
@@ -20,6 +28,9 @@ jobs:
       - run: npm test
 
       - run: npm run build
+
+      - name: Verify API against local D1 fixtures
+        run: bash scripts/test-worker.sh
 
       - name: Apply D1 migrations
         uses: cloudflare/wrangler-action@v3

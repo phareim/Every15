@@ -8,7 +8,7 @@
   ><!-- With an icon slot, the glyph carries the button on narrow screens and
         the text label takes over on wider ones. Without one, text always. -->
     <span v-if="$slots.icon" class="action-label__icon" aria-hidden="true"><slot name="icon" /></span>
-    <span :class="$slots.icon ? 'action-label__text' : undefined">&mdash;&nbsp;<slot /></span>
+    <span :class="$slots.icon ? 'action-label__text' : undefined"><slot /></span>
   </button>
 </template>
 
