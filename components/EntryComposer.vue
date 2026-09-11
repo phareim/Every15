@@ -244,7 +244,6 @@ function noteSavedFor(date: string, time: string): void {
 /** Pristine while the user has not typed and no draft waits for this slot. */
 function isPristine(): boolean {
   if (dirty.value) return false
-  if (text.value || tagsRaw.value) return false
   return !hasDraft(props.date, quarter.value)
 }
 

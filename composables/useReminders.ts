@@ -98,6 +98,7 @@ export function useNow(timezone: () => string) {
 
   function start(): void {
     stop()
+    tick()
     timer = setInterval(tick, 30000)
     if (typeof document !== 'undefined') {
       document.addEventListener('visibilitychange', tick)

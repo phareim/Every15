@@ -603,6 +603,27 @@ async function main() {
       pass('mobile pageerror none');
     }
     await mctx.close();
+
+    // A saved current quarter advances with the clock; a draft never does.
+    const clockContext = await browser.newContext({ timezoneId: 'Europe/Oslo' });
+    await clockContext.addCookies([{ name: 'session_token', value: SESSION, domain: host, path: '/' }]);
+    const clockPage = await clockContext.newPage();
+    try {
+      await clockPage.clock.install({ time: new Date(`${DAY}T08:01:00Z`) });
+      await clockPage.goto(BASE, { waitUntil: 'networkidle' });
+      await composerShows(clockPage, FIRST_EDITED);
+      await clockPage.clock.fastForward(15 * 60 * 1000);
+      await clockPage.waitForFunction(() => document.querySelector('#composer-quarter').value === '09:15');
+      pass('saved current quarter follows the clock');
+      await composer(clockPage).locator('#composer-text').fill('Clock test unsaved draft');
+      await clockPage.clock.fastForward(15 * 60 * 1000);
+      assert.strictEqual(await clockPage.locator('#composer-quarter').inputValue(), '09:15');
+      assert.strictEqual(await composerText(clockPage), 'Clock test unsaved draft');
+      pass('unsaved draft stays put across the next quarter');
+    } catch (err) {
+      fail('current quarter clock and draft protection', err.message);
+      mark(false);
+    } finally { await clockContext.close(); }
   } finally {
     if (browser) await browser.close().catch(() => {});
     // ---- Always clean up fixture rows via the API ----

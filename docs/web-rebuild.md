@@ -32,7 +32,7 @@ browser-observed state/layout issues, added local D1 verification to CI, and
 reviewed the rendered desktop and mobile pages.
 
 Completed locally: 33 backend unit checks, 31 UI helper checks, 58 real D1/API
-checks (including concurrent upserts), and 25 browser checks. Native code and
+checks (including concurrent upserts), and 27 browser checks. Native code and
 the obsolete backend were removed from the working tree; git preserves them
 at `185c512`. The historic R2 bucket was not changed.
 

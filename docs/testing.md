@@ -41,7 +41,7 @@ The API test also accepts explicit session values in `EVERY15_TEST_SESSION`,
 Omitted sessions are reported as skipped coverage. No test modifies Reader's
 production users or sessions.
 
-On 2026-09-11 the browser suite passed all 25 checks without skips or page
+On 2026-09-11 the browser suite passed all 27 checks without skips or page
 errors. The unit suite passed 33 validation/time/CSV tests; the separate UI
 helper suite passed 31 checks covering timezone labels, quarter boundaries,
 backfill windows, reminder cadence, and aggregation. Browser screenshots were
