@@ -5,7 +5,7 @@ cd "$(dirname "$0")/.."
 EVERY15_TEST_PORT="${EVERY15_TEST_PORT:-8789}"
 npx wrangler d1 migrations apply every15-web --local
 npx wrangler d1 execute reader-service --local --file tests/fixtures/reader.sql
-npx wrangler dev --port "$EVERY15_TEST_PORT" --ip 127.0.0.1 > /tmp/every15-test-worker.log 2>&1 &
+./node_modules/.bin/wrangler dev --port "$EVERY15_TEST_PORT" --ip 127.0.0.1 > /tmp/every15-test-worker.log 2>&1 &
 EVERY15_WORKER_PID=$!
 trap 'kill "$EVERY15_WORKER_PID" 2>/dev/null || true' EXIT
 for attempt in $(seq 1 60); do
