@@ -4,6 +4,8 @@ A quiet record of what you actually spend your day on. Write one short note per
 quarter-hour, continue the previous activity, or fill in a missed moment.
 
 Web app: **https://15.phareim.no**. Private, behind Reader login.
+Deployment and authenticated CRUD/export verified 2026-09-11;
+[GitHub Actions run](https://github.com/phareim/Every15/actions/runs/34574897708).
 
 ## Product
 

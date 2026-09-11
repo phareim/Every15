@@ -35,3 +35,10 @@ Completed locally: 33 backend unit checks, 31 UI helper checks, 58 real D1/API
 checks (including concurrent upserts), and 25 browser checks. Native code and
 the obsolete backend were removed from the working tree; git preserves them
 at `185c512`. The historic R2 bucket was not changed.
+
+Production verified 2026-09-11: GitHub Actions run `34574897708` completed
+successfully; HTTPS homepage returns 200, anonymous data returns 401, Reader
+login redirects back correctly, and authenticated create/read/update/export/
+delete passed with temporary entries removed afterwards. Scheduled reminders
+were also exercised in Chromium with a Notification API stub: while History
+is open, at the next boundary, deduplication after reload, and reminders off.
