@@ -28,7 +28,7 @@
         </NuxtLink>
       </li>
     </ul>
-    <p v-if="!loading && rows.length === 0" class="muted-italic journal-gap">
+    <p v-if="!loading && !rangeError && rows.length === 0" class="muted-italic journal-gap">
       No entries in the last fourteen days. A calm, empty fortnight.
     </p>
   </div>
@@ -47,7 +47,10 @@ const pick = ref('')
 
 const rows = computed(() => {
   const byDay = new Map<string, { count: number; first: string }>()
+  // The entry store is shared with other pages: keep to this fortnight.
+  const from = addDays(today.value, -13)
   for (const e of sorted.value) {
+    if (e.date < from || e.date > today.value) continue
     const row = byDay.get(e.date) ?? { count: 0, first: '' }
     row.count += 1
     if (!row.first) row.first = e.text

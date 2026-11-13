@@ -93,6 +93,7 @@ watch([nowTime, today, permission, effective], async () => {
 onMounted(async () => {
   refresh()
   start()
+  if (!auth.user.value) return // signed out: the data API would only answer 401
   try { await fetchSettings() } catch { /* Pages show the loading error. */ }
 })
 onUnmounted(stop)

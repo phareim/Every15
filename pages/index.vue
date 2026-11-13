@@ -74,7 +74,9 @@ const loginHref = computed(() => {
     return 'https://reader.phareim.no/login'
   }
 })
-const signedOut = computed(() => auth.checked.value && !auth.user.value)
+// Client-only session (see middleware): decide after mount so hydration matches.
+const mounted = ref(false)
+const signedOut = computed(() => mounted.value && auth.checked.value && !auth.user.value)
 const settingsError = computed(() => loadError.value)
 
 const allQuarters = quarterRange('00:00', '24:00')
@@ -218,6 +220,8 @@ async function onRemove(entry: Entry): Promise<void> {
 }
 
 onMounted(async () => {
+  mounted.value = true
+  if (signedOut.value) return // the sign-in prompt shows; the data API would answer 401
   try {
     await fetchSettings()
   } catch {
