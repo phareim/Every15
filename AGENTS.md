@@ -6,7 +6,7 @@ Web rebuild: 2026-09-10. The original native client is preserved in git at
 
 ## Stack and commands
 
-- Nuxt 3 / Vue / TypeScript on Cloudflare Workers.
+- Nuxt 4 / Vue / TypeScript on Cloudflare Workers.
 - `npm ci`, `npm test`, `npm run build`.
 - GitHub Actions deploys main after tests/build and D1 migrations.
 - Tufte Viz tactile paper and bundled ET Book; use the tufte-viz skill.

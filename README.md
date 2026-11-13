@@ -21,7 +21,7 @@ may be delayed when the browser suspends it.
 
 ## Architecture
 
-Nuxt 3 runs on a Cloudflare Worker (`every15-web`). Reader's shared session
+Nuxt 4 runs on a Cloudflare Worker (`every15-web`). Reader's shared session
 cookie identifies the user; an email allowlist gates all application data.
 The `DB` binding reads Reader sessions only. `EVERY15_DB` is this application's
 own D1 database and stores entries and preferences, scoped by user ID.

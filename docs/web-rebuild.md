@@ -8,7 +8,7 @@ Replace the retired Swift client and old backend with a Nuxt 3 personal web app 
 3. Coordinator: merge/review, install/build/test, browser integration and security checks, provision D1 and CI secrets, retire original client/backend, documentation, push and observe GitHub Actions, verify deployed site. Delegate fixes to Muse as appropriate.
 
 ## Shared contract (both packages must follow)
-- Nuxt 3 root project; app.vue uses NuxtPage. CSS imported by app.vue (UI owns CSS); framework config does not name CSS files. API uses $fetch.
+- Nuxt 4 root project; app.vue uses NuxtPage. CSS imported by app.vue (UI owns CSS); framework config does not name CSS files. API uses $fetch.
 - Entry shape: { id: string, date: 'YYYY-MM-DD', time: 'HH:mm', text: string, tags: string[], createdAt: string, updatedAt: string }. Exactly one entry per user/date/quarter. Every entry accounts for 15 minutes. Dates/times are local wall-clock values, not UTC; timezone only controls current date/time/reminders. Times must be on quarter-hour. Tags optional; text max 2000 chars, tags max 8, max 40 chars each.
 - GET /api/entries?from=YYYY-MM-DD&to=YYYY-MM-DD -> {entries: Entry[]}; inclusive max 366 days, sorted date then time.
 - PUT /api/entries -> body {date,time,text,tags?:string[]} -> {entry:Entry}; idempotent upsert quarter. DELETE /api/entries/:id -> {ok:true}.
